@@ -1,0 +1,68 @@
+# Publishing releases to Hugging Face
+
+The GitHub repository is the source of truth for catalogue metadata, build code, policy, and review history. The Hugging Face dataset repository stores generated release artifacts containing the actual cleaned corpus.
+
+## Create the dataset repository
+
+1. Create or sign in to a Hugging Face account.
+2. From the profile menu, choose **New Dataset**.
+3. Create a public dataset repository, preferably named `open-fiction-corpus`.
+4. Create a Dataset Card (`README.md`) describing provenance, rights limitations, corpus composition, intended use, and known limitations.
+
+Do not upload books manually until the build and rights-review process is working with a small test release.
+
+## Local authentication
+
+Install the current Hub client and authenticate:
+
+```bash
+pip install -U huggingface_hub
+hf auth login
+```
+
+Use a dedicated, narrowly scoped token for local publishing. Never commit a token to this repository, dataset files, logs, or configuration tracked by Git.
+
+## Manual test upload
+
+After creating a small release under `dist/`, upload it with:
+
+```bash
+hf upload YOUR-HF-USERNAME/open-fiction-corpus ./dist . --repo-type dataset
+```
+
+Hugging Face also supports uploads through its web interface and Python `HfApi.upload_folder()` method.
+
+## Automated releases
+
+For production releases, prefer a GitHub Actions workflow configured as a Hugging Face Trusted Publisher. Trusted publishing uses GitHub's OpenID Connect identity to obtain a short-lived, repository-scoped token during the workflow rather than storing a permanent Hugging Face write token in GitHub Secrets.
+
+The publication workflow should run only after an explicit versioned release action. It should:
+
+1. validate the catalogue;
+2. build the dataset from reviewed manifests and pinned sources;
+3. produce JSONL/Parquet, pack membership, checksums, and a build manifest;
+4. upload the release artifacts to the Hugging Face dataset repository;
+5. record the GitHub commit and dataset version in both repositories.
+
+The workflow will be added after the Hugging Face repository exists and the first source adapter has been implemented.
+
+## Recommended release files
+
+```text
+README.md
+books/
+  <work-id>.txt
+data/
+  books.parquet
+  books.jsonl.gz
+packs/
+  general-fiction.parquet
+  fantasy.parquet
+  mystery.parquet
+release/
+  build-manifest.json
+  pack-membership.json
+  checksums.sha256
+```
+
+Parquet is the preferred machine-readable format for the main dataset. Individual UTF-8 text files remain useful for transparent human inspection.
