@@ -7,7 +7,7 @@ The GitHub repository is the source of truth for catalogue metadata, build code,
 1. Create or sign in to a Hugging Face account.
 2. From the profile menu, choose **New Dataset**.
 3. Create a public dataset repository, preferably named `open-fiction-corpus`.
-4. Create a Dataset Card (`README.md`) describing provenance, rights limitations, corpus composition, intended use, and known limitations.
+4. Create a Dataset Card (`README.md`) describing provenance, rights limitations, corpus composition, intended use, and known limitations. Start from [`docs/dataset-card-template.md`](dataset-card-template.md).
 
 Do not upload books manually until the build and rights-review process is working with a small test release.
 
@@ -44,7 +44,7 @@ The publication workflow should run only after an explicit versioned release act
 4. upload the release artifacts to the Hugging Face dataset repository;
 5. record the GitHub commit and dataset version in both repositories.
 
-The workflow will be added after the Hugging Face repository exists and the first source adapter has been implemented.
+This workflow exists at [`.github/workflows/release.yml`](../.github/workflows/release.yml). It runs on published GitHub releases, supports a manual dry run that skips the upload, and refuses to publish a dataset with zero rows. Before the first real release, set the `HF_DATASET_REPO` repository variable and configure trusted publishing (or an `HF_TOKEN` secret as fallback) as described in the workflow's header comment. The source-fetching step is still a placeholder until the first source adapter is implemented.
 
 ## Recommended release files
 
