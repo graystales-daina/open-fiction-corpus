@@ -4,14 +4,22 @@ Thank you for helping build a transparent fiction corpus.
 
 ## Good first contributions
 
-- nominate a legally redistributable work;
+- [suggest a book for the editorial backlog](docs/suggesting-a-book.md);
 - verify metadata or rights evidence;
 - classify a reviewed work using the controlled vocabulary;
 - report OCR, formatting, or truncation problems;
 - improve validation and cleaning tools;
 - propose a source adapter.
 
-## Adding a work
+## Suggesting a book
+
+Book suggestions are open now, including to people with no programming experience. A suggestion changes only [`docs/book-backlog.md`](docs/book-backlog.md); it does not add a book to the dataset or declare an edition legally cleared.
+
+Read [`docs/suggesting-a-book.md`](docs/suggesting-a-book.md) before opening a suggestion pull request. Do not attach or commit ebook files, scraped text, manuscripts, or generated datasets.
+
+## Adding a work to the corpus
+
+Actual book processing is a later contribution stage. Before beginning, make sure the work has been claimed or approved for processing and that an exact source edition has been identified.
 
 1. Copy `catalog/examples/example-work.yaml` to `catalog/works/<stable-id>.yaml`.
 2. Replace every example value with verified information.
@@ -52,3 +60,5 @@ Use values defined in `schema/genres.yaml`. A work may have several genres but e
 ## Pull requests
 
 Keep one conceptual change per pull request where practical. CI must pass. Reviewers may request additional rights evidence or quality checks before a work enters a release pack.
+
+General contributors should fork the public repository and open a pull request from their fork. A maintainer reviews and merges accepted changes.
