@@ -60,7 +60,7 @@ def test_pack_filters_quality_origin_and_genre(tmp_path: Path) -> None:
     reviewed_fantasy = make_manifest(
         "reviewed-fantasy-en", **{"quality.status": "human-reviewed"}
     )
-    unreviewed = make_manifest("unreviewed-book-en")  # quality status stays candidate
+    unreviewed = make_manifest("unreviewed-book-en", **{"quality.status": "candidate"})
     reviewed_romance = make_manifest(
         "reviewed-romance-en",
         **{
@@ -139,3 +139,45 @@ def test_short_text_raises(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, "far too short")])
     with pytest.raises(ValueError, match="fewer than expected"):
         build_dataset(root)
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"quality.status": "candidate"},
+        {"quality.reviewed_by": []},
+        {"source.revision": "unpinned"},
+        {"processing.source_sha256": None},
+    ],
+)
+def test_release_gate_skips_unready_works(tmp_path: Path, override: dict) -> None:
+    ready = make_manifest("ready-book-en")
+    unready = make_manifest("unready-book-en", **override)
+    root = make_root(
+        tmp_path, [(ready, "ready text ships"), (unready, "unready text stays local")]
+    )
+
+    build_dataset(root)
+
+    assert [row["id"] for row in read_rows(root)] == ["ready-book-en"]
+
+
+def test_release_gate_applies_to_pack_builds(tmp_path: Path) -> None:
+    unready = make_manifest("unready-book-en", **{"source.revision": "unpinned"})
+    root = make_root(tmp_path, [(unready, "unready text stays local")])
+
+    build_dataset(root, pack="general-fiction")
+
+    assert read_rows(root, "general-fiction.jsonl.gz") == []
+
+
+def test_allow_unreviewed_includes_candidate_works(tmp_path: Path) -> None:
+    unready = make_manifest(
+        "unready-book-en",
+        **{"quality.status": "candidate", "processing.source_sha256": None},
+    )
+    root = make_root(tmp_path, [(unready, "development build text")])
+
+    build_dataset(root, allow_unreviewed=True)
+
+    assert [row["id"] for row in read_rows(root)] == ["unready-book-en"]

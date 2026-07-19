@@ -19,6 +19,7 @@ source:
   provider: example-provider
   identifier: example-work-123
   url: https://example.invalid/work/123
+  download_url: https://example.invalid/work/123/plain.txt
   revision: pinned-revision-or-commit
   format: txt
 

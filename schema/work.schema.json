@@ -36,6 +36,7 @@
         "provider": {"type": "string", "minLength": 1},
         "identifier": {"type": "string", "minLength": 1},
         "url": {"type": "string", "format": "uri"},
+        "download_url": {"type": "string", "format": "uri"},
         "revision": {"type": "string", "minLength": 1},
         "format": {"enum": ["txt", "xhtml", "html", "epub", "markdown"]}
       }

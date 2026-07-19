@@ -83,6 +83,20 @@ def _apply_author_cap(
     return selected
 
 
+def _release_readiness_problems(manifest: dict[str, Any]) -> list[str]:
+    problems = []
+    quality = manifest["quality"]
+    if quality["status"] != "human-reviewed":
+        problems.append(f"quality status is '{quality['status']}', not 'human-reviewed'")
+    if not quality.get("reviewed_by"):
+        problems.append("quality.reviewed_by records no reviewer")
+    if manifest["source"]["revision"] == "unpinned":
+        problems.append("source.revision is unpinned")
+    if not manifest.get("processing", {}).get("source_sha256"):
+        problems.append("processing.source_sha256 is not recorded")
+    return problems
+
+
 def _dataset_row(manifest: dict[str, Any], text: str) -> dict[str, Any]:
     return {
         "id": manifest["id"],
@@ -103,7 +117,11 @@ def _dataset_row(manifest: dict[str, Any], text: str) -> dict[str, Any]:
 
 
 def build_dataset(
-    root: Path, *, pack: str | None = None, allow_missing_text: bool = False
+    root: Path,
+    *,
+    pack: str | None = None,
+    allow_missing_text: bool = False,
+    allow_unreviewed: bool = False,
 ) -> None:
     root = root.resolve()
     if not validate_repository(root):
@@ -123,6 +141,23 @@ def build_dataset(
             print(f"Skipping {manifest['id']}: rights status '{status}' is not releasable.")
             continue
         gated.append(manifest)
+
+    # The release-readiness gate keeps unreviewed or unpinned works out of
+    # every default build, including the release workflow's whole-catalogue
+    # build. Development builds can opt out explicitly.
+    if not allow_unreviewed:
+        ready = []
+        for manifest in gated:
+            problems = _release_readiness_problems(manifest)
+            if problems:
+                print(
+                    f"Skipping {manifest['id']}: not release-ready "
+                    f"({'; '.join(problems)}). Use --allow-unreviewed for "
+                    "development builds."
+                )
+                continue
+            ready.append(manifest)
+        gated = ready
 
     if pack is not None:
         pack_doc = _find_pack(root, pack)

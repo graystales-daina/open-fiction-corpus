@@ -56,7 +56,7 @@ Then run:
 ofc build
 ```
 
-Works whose rights status is not marked `releasable` in `schema/rights-statuses.yaml` (for example `uncertain` or `excluded`) are always skipped. To build a single pack's selection instead of the whole catalogue:
+Works whose rights status is not marked `releasable` in `schema/rights-statuses.yaml` (for example `uncertain` or `excluded`) are always skipped. Works that are not yet release-ready — quality status below `human-reviewed`, no recorded reviewer, an unpinned source revision, or a missing source hash — are also skipped; pass `--allow-unreviewed` for local development builds only. To build a single pack's selection instead of the whole catalogue:
 
 ```bash
 ofc build --pack general-fiction

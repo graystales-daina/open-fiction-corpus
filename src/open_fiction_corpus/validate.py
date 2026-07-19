@@ -53,14 +53,17 @@ def collect_errors(root: Path) -> list[str]:
 
     schema_path = root / "schema" / "work.schema.json"
     pack_schema_path = root / "schema" / "pack.schema.json"
+    overrides_schema_path = root / "schema" / "overrides.schema.json"
     genres_path = root / "schema" / "genres.yaml"
     rights_path = root / "schema" / "rights-statuses.yaml"
     flags_path = root / "schema" / "quality-flags.yaml"
 
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     pack_schema = json.loads(pack_schema_path.read_text(encoding="utf-8"))
+    overrides_schema = json.loads(overrides_schema_path.read_text(encoding="utf-8"))
     validator = Draft202012Validator(schema)
     pack_validator = Draft202012Validator(pack_schema)
+    overrides_validator = Draft202012Validator(overrides_schema)
     genres_doc = _load_yaml(genres_path)
     rights_doc = _load_yaml(rights_path)
     flags_doc = _load_yaml(flags_path)
@@ -111,9 +114,10 @@ def collect_errors(root: Path) -> list[str]:
 
         source = manifest.get("source")
         if isinstance(source, dict):
-            source_url = source.get("url")
-            if isinstance(source_url, str) and not _is_absolute_http_url(source_url):
-                errors.append(f"{path}: source.url must be an absolute http(s) URL")
+            for field in ("url", "download_url"):
+                value = source.get(field)
+                if isinstance(value, str) and not _is_absolute_http_url(value):
+                    errors.append(f"{path}: source.{field} must be an absolute http(s) URL")
 
         classification = manifest.get("classification")
         if isinstance(classification, dict):
@@ -147,6 +151,18 @@ def collect_errors(root: Path) -> list[str]:
                 unknown_flags = work_flags - quality_flags
                 if unknown_flags:
                     errors.append(f"{path}: unknown quality flags: {sorted(unknown_flags)}")
+
+    for overrides_path in sorted((root / "overrides").glob("*.yaml")):
+        try:
+            overrides = _load_yaml(overrides_path)
+        except Exception as exc:
+            errors.append(f"{overrides_path}: cannot parse YAML: {exc}")
+            continue
+        _append_schema_errors(errors, overrides_path, overrides_validator, overrides)
+        if overrides_path.stem not in seen_ids:
+            errors.append(
+                f"{overrides_path}: no work manifest with id '{overrides_path.stem}'"
+            )
 
     seen_pack_names: dict[str, Path] = {}
     for pack_path in sorted((root / "packs").rglob("*.yaml")):

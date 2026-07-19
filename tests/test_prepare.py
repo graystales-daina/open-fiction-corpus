@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import io
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -11,6 +14,7 @@ from open_fiction_corpus.prepare import (
     apply_overrides,
     clean_fiction,
     extract_gutenberg_txt,
+    fetch_source,
     modernize_spelling,
     prepare_work,
 )
@@ -40,6 +44,26 @@ replied, "our connexion ends."
 
 Redistribution terms that must never reach the corpus.
 """
+
+GUTENBERG_SHA256 = hashlib.sha256(GUTENBERG_FILE.encode("utf-8")).hexdigest()
+
+
+class _FakeResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+def _make_response(payload: bytes) -> _FakeResponse:
+    return _FakeResponse(payload)
+
+
+def _fake_urlopen(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> None:
+    monkeypatch.setattr(
+        urllib.request, "urlopen", lambda request, timeout: _make_response(payload)
+    )
 
 
 def test_extract_strips_header_footer_and_credits() -> None:
@@ -95,6 +119,7 @@ def test_prepare_work_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture) 
         **{
             "processing.extractor": "gutenberg_txt_v1",
             "processing.modernizer": "modernize_spelling_v1",
+            "processing.source_sha256": GUTENBERG_SHA256,
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
@@ -116,7 +141,11 @@ def test_prepare_work_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture) 
 def test_prepare_work_applies_overrides(tmp_path: Path) -> None:
     manifest = make_manifest(
         "example-work",
-        **{"processing.extractor": "gutenberg_txt_v1", "processing.modernizer": None},
+        **{
+            "processing.extractor": "gutenberg_txt_v1",
+            "processing.modernizer": None,
+            "processing.source_sha256": GUTENBERG_SHA256,
+        },
     )
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
@@ -148,7 +177,11 @@ def test_prepare_work_applies_overrides(tmp_path: Path) -> None:
 
 def test_prepare_work_rejects_unknown_extractor(tmp_path: Path) -> None:
     manifest = make_manifest(
-        "example-work", **{"processing.extractor": "no_such_extractor"}
+        "example-work",
+        **{
+            "processing.extractor": "no_such_extractor",
+            "processing.source_sha256": GUTENBERG_SHA256,
+        },
     )
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
@@ -156,6 +189,106 @@ def test_prepare_work_rejects_unknown_extractor(tmp_path: Path) -> None:
     (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
     with pytest.raises(ValueError, match="Unknown extractor"):
         prepare_work(root, "example-work", skip_fetch=True)
+
+
+def test_overrides_reject_missing_or_invalid_count(tmp_path: Path) -> None:
+    path = tmp_path / "work.yaml"
+    for bad in [{}, {"count": 0}, {"count": True}, {"count": "2"}]:
+        correction = {"find": "a", "replace": "b", "note": "n", **bad}
+        path.write_text(yaml.safe_dump({"corrections": [correction]}), encoding="utf-8")
+        with pytest.raises(ValueError, match="positive integer 'count'"):
+            apply_overrides("a", path)
+
+
+def test_skip_fetch_verifies_pinned_hash(tmp_path: Path) -> None:
+    manifest = make_manifest(
+        "example-work", **{"processing.extractor": "gutenberg_txt_v1"}
+    )  # helper default hash does not match the synthetic raw file
+    root = make_root(tmp_path, [(manifest, None)])
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    with pytest.raises(ValueError, match="hash mismatch"):
+        prepare_work(root, "example-work", skip_fetch=True)
+
+
+def test_fetch_uses_download_url_and_project_user_agent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://example.invalid/cache/pg999.txt",
+            "processing.source_sha256": GUTENBERG_SHA256,
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    seen = {}
+
+    def fake_urlopen(request, timeout):
+        seen["url"] = request.full_url
+        seen["user_agent"] = request.get_header("User-agent")
+        return _make_response(GUTENBERG_FILE.encode("utf-8"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    raw_path = fetch_source(root, manifest)
+
+    assert seen["url"] == "https://example.invalid/cache/pg999.txt"
+    assert "open-fiction-corpus" in seen["user_agent"]
+    assert raw_path.name == "pg999.txt"
+    assert raw_path.read_text(encoding="utf-8") == GUTENBERG_FILE
+
+
+def test_fetch_hash_mismatch_writes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://example.invalid/cache/pg999.txt",
+            "processing.source_sha256": "f" * 64,
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    _fake_urlopen(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
+
+    with pytest.raises(ValueError, match="hash mismatch"):
+        fetch_source(root, manifest)
+
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    assert not raw_dir.exists() or list(raw_dir.iterdir()) == []
+
+
+def test_fetch_requires_download_url(tmp_path: Path) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{"source.provider": "gutenberg", "source.download_url": None},
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    with pytest.raises(ValueError, match="download_url"):
+        fetch_source(root, manifest)
+
+
+def test_overrides_are_validated_by_repository_validation(tmp_path: Path) -> None:
+    from open_fiction_corpus.validate import collect_errors
+
+    manifest = make_manifest("example-work")
+    root = make_root(tmp_path, [(manifest, None)])
+    overrides_dir = root / "overrides"
+    overrides_dir.mkdir()
+    (overrides_dir / "example-work.yaml").write_text(
+        yaml.safe_dump({"corrections": [{"find": "a", "replace": "b"}]}),
+        encoding="utf-8",
+    )
+    (overrides_dir / "no-such-work.yaml").write_text(
+        yaml.safe_dump({"corrections": []}), encoding="utf-8"
+    )
+
+    joined = "\n".join(collect_errors(root))
+    assert "'count' is a required property" in joined
+    assert "no work manifest with id 'no-such-work'" in joined
 
 
 def test_time_machine_manifest_is_catalogued() -> None:

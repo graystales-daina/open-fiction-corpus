@@ -18,6 +18,7 @@ source:
   provider: gutenberg
   identifier: "35"
   url: https://www.gutenberg.org/ebooks/35
+  download_url: https://www.gutenberg.org/cache/epub/35/pg35.txt
   revision: unpinned
   format: txt
 
@@ -31,9 +32,9 @@ rights:
     - H. G. Wells died on 13 August 1946, so life+70 protection expired on
       1 January 2017 in the EU and the UK.
   licence: null
-  notes: Original English text, no translation or later editorial material.
-    The Project Gutenberg transcription (ebook 35) carries no separately
-    protectable contribution.
+  notes: Original English work, no translation or later editorial material.
+    Source is the Project Gutenberg transcription (ebook 35); Gutenberg
+    boilerplate and platform metadata are removed during extraction.
 
 classification:
   primary_genre: science-fiction

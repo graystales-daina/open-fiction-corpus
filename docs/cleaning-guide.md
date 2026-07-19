@@ -12,10 +12,18 @@ Do not silently modernise spelling, grammar, punctuation, or vocabulary. Do not 
 
 Archaic spellings are modernised deliberately, never as a silent cleaning side effect. A work opts in through `processing.modernizer` in its manifest; the versioned moderniser applies only the whole-word rules reviewed into [`schema/modernization-rules.yaml`](../schema/modernization-rules.yaml) (for example `to-day` → `today`, `connexion` → `connection`), preserves case, and reports a per-rule replacement count when `ofc prepare` runs. Grammar, vocabulary, dialect, punctuation, and multi-word phrases are never modernised. A work processed without a moderniser keeps its original spellings.
 
+## Cleaner scope
+
+`fiction_clean_v1` unwraps hard-wrapped lines within every paragraph, which flattens intentional lineation. It is therefore safe only for prose-only works. Works containing verse, songs, inscriptions, deliberately lineated letters, or similar material must not use it as-is; they need a future cleaner version with structural handling, and the limitation should be noted in the work's review notes until then.
+
 ## Where rules live
 
-Automatic rules belong in versioned cleaners and modernisers. Work-specific corrections belong in `overrides/<work-id>.yaml`: each correction records `find`, `replace`, a `note` explaining the change, and the exact number of expected matches, so the pipeline fails loudly if the source text shifts underneath it.
+Automatic rules belong in versioned cleaners and modernisers. Work-specific corrections belong in `overrides/<work-id>.yaml`, validated against [`schema/overrides.schema.json`](../schema/overrides.schema.json): each correction records a non-empty `find`, a `replace`, a `note` explaining the change, and the exact number of expected matches (`count`), so the pipeline fails loudly if the source text shifts underneath it.
 
 ## Running the pipeline
 
-`ofc prepare <work-id>` fetches the pinned raw source into `workspace/raw/<work-id>/`, verifies its SHA-256 when `processing.source_sha256` is set, then applies the manifest's extractor, cleaner, moderniser, and overrides, writing the canonical text to `workspace/clean/<work-id>.txt`. Neither directory is ever committed.
+`ofc prepare <work-id>` downloads the exact artifact named by the manifest's `source.download_url` into `workspace/raw/<work-id>/`, verifies its SHA-256 against `processing.source_sha256` before anything is written (and again on `--skip-fetch` runs), then applies the manifest's extractor, cleaner, moderniser, and overrides, writing the canonical text to `workspace/clean/<work-id>.txt`. Neither directory is ever committed.
+
+## Source access policy
+
+Fetching is deliberately conservative: one HTTP request per work per invocation, a descriptive project User-Agent, no automatic retries, and no crawling. Bulk or repeated downloading of gutenberg.org is not acceptable; if the catalogue grows to need bulk retrieval, use Project Gutenberg's official mirrors and document the chosen mirror here first. A recorded hash detects upstream changes but cannot recover old bytes once a source regenerates a file, so the release process will eventually need retained, content-addressed raw artifacts outside ordinary Git history (tracked in the pilot issue).

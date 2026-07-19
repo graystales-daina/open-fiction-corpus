@@ -20,11 +20,16 @@ def make_manifest(work_id: str, **overrides: Any) -> dict[str, Any]:
     """Return a copy of the example manifest with a new id and dotted-path overrides.
 
     Overrides use dotted keys, e.g. make_manifest("x", **{"rights.status": "uncertain"}).
-    expected_min_words defaults to 3 so tests can use short texts.
+    expected_min_words defaults to 3 so tests can use short texts, and the
+    manifest defaults to release-ready (human-reviewed, pinned, hashed) so
+    build tests pass the release-readiness gate unless a test opts out.
     """
     manifest = copy.deepcopy(BASE_MANIFEST)
     manifest["id"] = work_id
     manifest["processing"]["expected_min_words"] = 3
+    manifest["processing"]["source_sha256"] = "0" * 64
+    manifest["quality"]["status"] = "human-reviewed"
+    manifest["quality"]["reviewed_by"] = ["test-reviewer"]
     for dotted, value in overrides.items():
         target = manifest
         *parents, leaf = dotted.split(".")

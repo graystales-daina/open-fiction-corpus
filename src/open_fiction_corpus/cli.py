@@ -30,6 +30,12 @@ def main() -> None:
     build_parser.add_argument("--root", type=Path, default=Path.cwd())
     build_parser.add_argument("--allow-missing-text", action="store_true")
     build_parser.add_argument(
+        "--allow-unreviewed",
+        action="store_true",
+        help="Development builds only: include works that are not release-ready "
+        "(unreviewed quality, unpinned revision, or missing source hash)",
+    )
+    build_parser.add_argument(
         "--pack", help="Build only works selected by the named pack definition"
     )
 
@@ -39,7 +45,12 @@ def main() -> None:
     if args.command == "prepare":
         prepare_work(args.root, args.work_id, skip_fetch=args.skip_fetch)
     if args.command == "build":
-        build_dataset(args.root, pack=args.pack, allow_missing_text=args.allow_missing_text)
+        build_dataset(
+            args.root,
+            pack=args.pack,
+            allow_missing_text=args.allow_missing_text,
+            allow_unreviewed=args.allow_unreviewed,
+        )
 
 
 if __name__ == "__main__":

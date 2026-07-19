@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import hashlib
 import re
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
 import yaml
+
+# One request per work per invocation, no automatic retries, no crawling;
+# see the source access policy in docs/cleaning-guide.md.
+_USER_AGENT = "open-fiction-corpus (+https://github.com/open-fiction-corpus/open-fiction-corpus)"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -28,35 +33,48 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def gutenberg_source_url(identifier: str) -> str:
-    return f"https://www.gutenberg.org/cache/epub/{identifier}/pg{identifier}.txt"
-
-
 def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
-    """Download the raw source into workspace/raw/<work-id>/ and verify its hash."""
+    """Download the exact artifact named by source.download_url and verify its hash.
+
+    The file is written to workspace/raw/<work-id>/ only after the hash check
+    passes, so a failed verification leaves nothing behind for a later
+    --skip-fetch run to trust.
+    """
     source = manifest["source"]
     provider = source["provider"]
     if provider != "gutenberg":
         raise ValueError(f"No fetcher for source provider '{provider}'")
+    url = source.get("download_url")
+    if not url:
+        raise ValueError(
+            f"{manifest['id']}: source.download_url must name the exact artifact to fetch"
+        )
 
-    url = gutenberg_source_url(source["identifier"])
-    raw_dir = root / "workspace" / "raw" / manifest["id"]
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    raw_path = raw_dir / url.rsplit("/", 1)[-1]
-
-    with urllib.request.urlopen(url, timeout=60) as response:
-        data = response.read()
-    raw_path.write_bytes(data)
+    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = response.read()
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Failed to fetch {url}: {exc}") from exc
 
     digest = _sha256(data)
     pinned = manifest.get("processing", {}).get("source_sha256")
+    if pinned is not None and digest != pinned:
+        raise ValueError(
+            f"{manifest['id']}: source hash mismatch: expected {pinned}, got {digest}; "
+            "nothing was written"
+        )
+
+    raw_dir = root / "workspace" / "raw" / manifest["id"]
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = raw_dir / url.rsplit("/", 1)[-1]
+    temporary = raw_path.with_name(raw_path.name + ".tmp")
+    temporary.write_bytes(data)
+    temporary.replace(raw_path)
+
     if pinned is None:
         print(f"Fetched {url}")
         print(f"Unpinned source; record processing.source_sha256: {digest}")
-    elif digest != pinned:
-        raise ValueError(
-            f"{manifest['id']}: source hash mismatch: expected {pinned}, got {digest}"
-        )
     else:
         print(f"Fetched {url} (sha256 verified)")
     return raw_path
@@ -95,6 +113,10 @@ def clean_fiction(text: str) -> str:
     Paragraph breaks become one blank line; larger gaps (section breaks in the
     transcription) are preserved as two blank lines. Emphasis markup, headings,
     spelling, and punctuation are left untouched.
+
+    Scope: prose-only. Unwrapping flattens intentional lineation, so works
+    containing verse, songs, or other lineated material need a future cleaner
+    version; see the cleaning guide.
     """
     text = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
     parts = re.split(r"(\n{2,})", text.strip("\n"))
@@ -142,16 +164,26 @@ def apply_overrides(text: str, overrides_path: Path) -> str:
         find = correction.get("find")
         replace = correction.get("replace")
         note = correction.get("note")
-        if not isinstance(find, str) or not isinstance(replace, str) or not note:
+        count = correction.get("count")
+        if (
+            not isinstance(find, str)
+            or not find
+            or not isinstance(replace, str)
+            or not isinstance(note, str)
+            or not note
+            or isinstance(count, bool)
+            or not isinstance(count, int)
+            or count < 1
+        ):
             raise ValueError(
-                f"{overrides_path}: correction {index} needs 'find', 'replace', and 'note'"
+                f"{overrides_path}: correction {index} needs a non-empty 'find', "
+                "a 'replace', a 'note', and a positive integer 'count'"
             )
         occurrences = text.count(find)
-        expected = correction.get("count", 1)
-        if occurrences != expected:
+        if occurrences != count:
             raise ValueError(
                 f"{overrides_path}: correction {find!r} matched {occurrences} "
-                f"time(s), expected {expected}"
+                f"time(s), expected {count}"
             )
         text = text.replace(find, replace)
     return text
@@ -192,6 +224,14 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
                 f"--skip-fetch needs exactly one raw file under {raw_dir}"
             )
         raw_path = raw_files[0]
+        pinned = processing.get("source_sha256")
+        if pinned is not None:
+            digest = _sha256(raw_path.read_bytes())
+            if digest != pinned:
+                raise ValueError(
+                    f"{work_id}: raw file {raw_path.name} hash mismatch: "
+                    f"expected {pinned}, got {digest}"
+                )
     else:
         raw_path = fetch_source(root, manifest)
 
