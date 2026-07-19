@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import urllib.request
 from pathlib import Path
 
@@ -54,6 +55,25 @@ class _FakeResponse(io.BytesIO):
 
     def __exit__(self, *args):
         return False
+
+
+def _write_raw(root: Path, manifest: dict, text: str = GUTENBERG_FILE) -> Path:
+    """Write the canonical raw artifact plus a matching provenance sidecar."""
+    work_id = manifest["id"]
+    raw_dir = root / "workspace" / "raw" / work_id
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = raw_dir / f"{work_id}.txt"
+    raw_path.write_text(text, encoding="utf-8")
+    sidecar = {
+        "provider": manifest["source"]["provider"],
+        "identifier": manifest["source"]["identifier"],
+        "download_url": manifest["source"].get("download_url"),
+        "sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+    }
+    (raw_dir / f"{work_id}.txt.provenance.json").write_text(
+        json.dumps(sidecar), encoding="utf-8"
+    )
+    return raw_path
 
 
 def _fake_network(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> dict:
@@ -127,9 +147,7 @@ def test_prepare_work_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture) 
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    raw_dir.mkdir(parents=True)
-    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    _write_raw(root, manifest)
 
     clean_path = prepare_work(root, "example-work", skip_fetch=True)
 
@@ -152,9 +170,7 @@ def test_prepare_work_applies_overrides(tmp_path: Path) -> None:
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    raw_dir.mkdir(parents=True)
-    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    _write_raw(root, manifest)
     overrides_dir = root / "overrides"
     overrides_dir.mkdir()
     (overrides_dir / "example-work.yaml").write_text(
@@ -188,9 +204,7 @@ def test_prepare_work_rejects_unknown_extractor(tmp_path: Path) -> None:
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    raw_dir.mkdir(parents=True)
-    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    _write_raw(root, manifest)
     with pytest.raises(ValueError, match="Unknown extractor"):
         prepare_work(root, "example-work", skip_fetch=True)
 
@@ -227,9 +241,7 @@ def test_skip_fetch_verifies_pinned_hash(tmp_path: Path) -> None:
         "example-work", **{"processing.extractor": "gutenberg_txt_v1"}
     )  # helper default hash does not match the synthetic raw file
     root = make_root(tmp_path, [(manifest, None)])
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    raw_dir.mkdir(parents=True)
-    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    _write_raw(root, manifest)
     with pytest.raises(ValueError, match="hash mismatch"):
         prepare_work(root, "example-work", skip_fetch=True)
 
@@ -257,6 +269,11 @@ def test_fetch_uses_download_url_and_project_user_agent(
     # The remote basename is ignored: the local name derives from the work id.
     assert raw_path.name == "example-work.txt"
     assert raw_path.read_text(encoding="utf-8") == GUTENBERG_FILE
+    sidecar = json.loads(
+        (raw_path.parent / "example-work.txt.provenance.json").read_text(encoding="utf-8")
+    )
+    assert sidecar["identifier"] == "999"
+    assert sidecar["sha256"] == GUTENBERG_SHA256
 
 
 def test_fetch_hash_mismatch_writes_nothing(
@@ -315,6 +332,8 @@ def test_redirects_to_unapproved_locations_are_refused() -> None:
         "https://www.gutenberg.org:8443" + path,
         # Same approved host but a different artifact path.
         "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+        # Same path but a query string sneaks in.
+        f"https://www.gutenberg.org{path}?evil=1",
     ]:
         with pytest.raises(ValueError, match="unapproved location"):
             handler.redirect_request(request, None, 302, "Found", {}, bad)
@@ -369,6 +388,99 @@ def test_fetch_rejects_urls_not_bound_to_the_identifier(tmp_path: Path) -> None:
         root = make_root(tmp_path / bad_url[-9:-4], [(manifest, None)])
         with pytest.raises(ValueError, match="pg999"):
             fetch_source(root, manifest)
+
+
+def test_skip_fetch_rejects_stale_source_provenance(tmp_path: Path) -> None:
+    gutenberg_999 = {
+        "source.provider": "gutenberg",
+        "source.identifier": "999",
+        "source.url": "https://www.gutenberg.org/ebooks/999",
+        "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
+        "processing.extractor": "gutenberg_txt_v1",
+        "processing.source_sha256": None,
+    }
+    manifest = make_manifest("example-work", **gutenberg_999)
+    root = make_root(tmp_path, [(manifest, None)])
+    _write_raw(root, manifest)
+
+    # The manifest moves to a different ebook while the old, unpinned raw
+    # file is still on disk.
+    from helpers import write_manifest
+
+    changed = make_manifest(
+        "example-work",
+        **{
+            **gutenberg_999,
+            "source.identifier": "1000",
+            "source.url": "https://www.gutenberg.org/ebooks/1000",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/1000/pg1000.txt",
+        },
+    )
+    write_manifest(root, changed)
+
+    with pytest.raises(ValueError, match="provenance does not match"):
+        prepare_work(root, "example-work", skip_fetch=True)
+
+
+def test_skip_fetch_requires_provenance_sidecar(tmp_path: Path) -> None:
+    manifest = make_manifest(
+        "example-work", **{"processing.source_sha256": None}
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    raw_dir.mkdir(parents=True)
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="provenance sidecar"):
+        prepare_work(root, "example-work", skip_fetch=True)
+
+
+def test_gutenberg_binding_requires_exact_landing_page_and_txt(tmp_path: Path) -> None:
+    from open_fiction_corpus.prepare import gutenberg_artifact_error
+
+    base = {
+        "provider": "gutenberg",
+        "identifier": "35",
+        "format": "txt",
+        "url": "https://www.gutenberg.org/ebooks/35",
+        "download_url": "https://www.gutenberg.org/cache/epub/35/pg35.txt",
+        "revision": "r",
+    }
+    assert gutenberg_artifact_error(base) is None
+
+    for change, expected in [
+        ({"url": "https://evil.example/ebooks/35"}, "landing page"),
+        ({"url": "http://www.gutenberg.org/ebooks/35"}, "landing page"),
+        ({"url": None}, "landing page"),
+        ({"url": "https://www.gutenberg.org/ebooks/35?x=1"}, "landing page"),
+        ({"format": "epub"}, "format: txt"),
+        (
+            {"download_url": "https://www.gutenberg.org/cache/epub/35/pg35.epub"},
+            "pg35.txt",
+        ),
+        (
+            {"download_url": "https://www.gutenberg.org/cache/epub/35/pg35.txt?x=1"},
+            "no query",
+        ),
+    ]:
+        error = gutenberg_artifact_error({**base, **change})
+        assert error is not None and expected in error, (change, error)
+
+
+def test_prepare_rejects_provider_incompatible_extractor(tmp_path: Path) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "source.provider": "gutenberg",
+            "source.identifier": "999",
+            "source.url": "https://www.gutenberg.org/ebooks/999",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
+            "processing.extractor": "plain_text_v1",
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    with pytest.raises(ValueError, match="requires an extractor"):
+        prepare_work(root, "example-work", skip_fetch=True)
 
 
 def test_prepare_rejects_invalid_or_mismatched_work_ids(tmp_path: Path) -> None:
@@ -495,9 +607,7 @@ def test_failed_prepare_preserves_existing_clean_text(tmp_path: Path) -> None:
         },
     )
     root = make_root(tmp_path, [(manifest, "previously valid clean text")])
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    raw_dir.mkdir(parents=True)
-    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    _write_raw(root, manifest)
     overrides_dir = root / "overrides"
     overrides_dir.mkdir()
     (overrides_dir / "example-work.yaml").write_text(

@@ -8,6 +8,7 @@ and moderniser named in the manifest and the work-specific overrides file.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import urllib.error
 import urllib.request
@@ -38,6 +39,12 @@ _FORMAT_EXTENSIONS = {"txt": "txt", "xhtml": "xhtml", "html": "html", "epub": "e
 # as a path component - `ofc prepare` does not run the schema validator.
 _WORK_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
+# Extractors each provider's adapter can actually feed. Kept in sync with
+# what fetch_source downloads and prepare_work reads (UTF-8 text).
+PROVIDER_EXTRACTORS: dict[str, frozenset[str]] = {
+    "gutenberg": frozenset({"gutenberg_txt_v1"}),
+}
+
 
 def is_approved_download_url(url: str, hosts: frozenset[str]) -> bool:
     """True only for https URLs on an approved host at the default port 443.
@@ -65,9 +72,12 @@ class _ApprovedRedirects(urllib.request.HTTPRedirectHandler):
         self.path = path
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parts = urlsplit(newurl)
         if (
             not is_approved_download_url(newurl, self.hosts)
-            or urlsplit(newurl).path != self.path
+            or parts.path != self.path
+            or parts.query
+            or parts.fragment
         ):
             raise ValueError(f"Refusing redirect to unapproved location: {newurl}")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
@@ -83,6 +93,10 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _provenance_path(raw_path: Path) -> Path:
+    return raw_path.with_name(raw_path.name + ".provenance.json")
 
 
 def raw_source_path(root: Path, manifest: dict[str, Any]) -> Path:
@@ -105,32 +119,50 @@ def raw_source_path(root: Path, manifest: dict[str, Any]) -> Path:
 
 
 def gutenberg_artifact_error(source: dict[str, Any]) -> str | None:
-    """Why a gutenberg source's URLs do not match its identifier, else None.
+    """Why a gutenberg source does not match its identifier, else None.
 
     Binds the exported provenance (source.identifier) to the recorded landing
     page and to the artifact actually fetched, so the catalogue cannot claim
-    one ebook while downloading another.
+    one ebook while downloading another. Also restricts the adapter to the
+    one combination the pipeline can currently process: format txt and the
+    plain-text cache artifact.
     """
     identifier = source.get("identifier")
     if not isinstance(identifier, str) or not identifier.isdigit():
         return "source.identifier must be the Gutenberg ebook number (digits only)"
+    if source.get("format") != "txt":
+        return "the gutenberg adapter currently supports only source.format: txt"
+    hosts = APPROVED_SOURCE_HOSTS["gutenberg"]
+
     url = source.get("url")
-    if isinstance(url, str):
+    landing_ok = False
+    if isinstance(url, str) and is_approved_download_url(url, hosts):
         parts = urlsplit(url)
-        if (
-            parts.hostname in APPROVED_SOURCE_HOSTS["gutenberg"]
-            and parts.path.rstrip("/") != f"/ebooks/{identifier}"
-        ):
-            return f"source.url must be the ebook landing page /ebooks/{identifier}"
+        landing_ok = (
+            parts.path.rstrip("/") == f"/ebooks/{identifier}"
+            and not parts.query
+            and not parts.fragment
+        )
+    if not landing_ok:
+        return (
+            f"source.url must be the https Gutenberg landing page "
+            f"/ebooks/{identifier} on an approved host"
+        )
+
     download_url = source.get("download_url")
     if isinstance(download_url, str):
-        directory, _, basename = urlsplit(download_url).path.rpartition("/")
-        if directory != f"/cache/epub/{identifier}" or not basename.startswith(
-            f"pg{identifier}."
+        parts = urlsplit(download_url)
+        directory, _, basename = parts.path.rpartition("/")
+        if (
+            directory != f"/cache/epub/{identifier}"
+            or basename != f"pg{identifier}.txt"
+            or parts.query
+            or parts.fragment
         ):
             return (
-                f"source.download_url must point at the "
-                f"/cache/epub/{identifier}/pg{identifier}.* artifact"
+                f"source.download_url must be exactly the "
+                f"/cache/epub/{identifier}/pg{identifier}.txt artifact "
+                "with no query or fragment"
             )
     return None
 
@@ -193,6 +225,20 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
     temporary = raw_path.with_name(raw_path.name + ".tmp")
     temporary.write_bytes(data)
     temporary.replace(raw_path)
+
+    # The sidecar records what these bytes ARE, so later --skip-fetch runs
+    # can prove the file still matches the manifest's declared source even
+    # while processing.source_sha256 is unpinned.
+    provenance = {
+        "provider": provider,
+        "identifier": source["identifier"],
+        "download_url": url,
+        "sha256": digest,
+    }
+    provenance_path = _provenance_path(raw_path)
+    temporary = provenance_path.with_name(provenance_path.name + ".tmp")
+    temporary.write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(provenance_path)
 
     if pinned is None:
         print(f"Fetched {url}")
@@ -311,8 +357,14 @@ def apply_overrides(text: str, overrides_path: Path) -> str:
     return text
 
 
+def extract_plain_text(raw_text: str) -> str:
+    """Pass-through extractor for sources with no platform boilerplate."""
+    return raw_text
+
+
 EXTRACTORS: dict[str, Callable[[str], str]] = {
     "gutenberg_txt_v1": extract_gutenberg_txt,
+    "plain_text_v1": extract_plain_text,
 }
 
 CLEANERS: dict[str, Callable[[str], str]] = {
@@ -347,6 +399,23 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
         )
     processing = manifest["processing"]
 
+    # Resolve every registry name and check provider compatibility before
+    # any network request or filesystem read, so an unprocessable manifest
+    # fails without side effects.
+    extractor = _lookup(EXTRACTORS, processing["extractor"], "extractor")
+    cleaner = _lookup(CLEANERS, processing["cleaner"], "cleaner")
+    modernizer_name = processing.get("modernizer")
+    modernizer = (
+        _lookup(MODERNIZERS, modernizer_name, "modernizer") if modernizer_name else None
+    )
+    provider = manifest["source"]["provider"]
+    compatible = PROVIDER_EXTRACTORS.get(provider)
+    if compatible is not None and processing["extractor"] not in compatible:
+        raise ValueError(
+            f"{work_id}: provider '{provider}' requires an extractor from "
+            f"{sorted(compatible)}, got '{processing['extractor']}'"
+        )
+
     if skip_fetch:
         # Only the canonical raw artifact qualifies: temporary files from an
         # interrupted fetch or strays from older pipeline versions never do.
@@ -355,25 +424,47 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
             raise FileNotFoundError(
                 f"--skip-fetch requires the fetched raw file at {raw_path}"
             )
+        # The provenance sidecar written at fetch time must still match the
+        # manifest, so a raw file from a since-changed source (different
+        # identifier, URL, or upstream bytes) is never silently prepared -
+        # even while processing.source_sha256 is unpinned.
+        provenance_path = _provenance_path(raw_path)
+        if not provenance_path.is_file():
+            raise ValueError(
+                f"{work_id}: missing provenance sidecar {provenance_path.name}; "
+                "re-run without --skip-fetch"
+            )
+        recorded = json.loads(provenance_path.read_text(encoding="utf-8"))
+        source = manifest["source"]
+        digest = _sha256(raw_path.read_bytes())
+        mismatched = sorted(
+            field
+            for field, expected in (
+                ("provider", source["provider"]),
+                ("identifier", source["identifier"]),
+                ("download_url", source.get("download_url")),
+                ("sha256", digest),
+            )
+            if recorded.get(field) != expected
+        )
+        if mismatched:
+            raise ValueError(
+                f"{work_id}: raw file provenance does not match the manifest "
+                f"({', '.join(mismatched)}); re-run without --skip-fetch"
+            )
         pinned = processing.get("source_sha256")
-        if pinned is not None:
-            digest = _sha256(raw_path.read_bytes())
-            if digest != pinned:
-                raise ValueError(
-                    f"{work_id}: raw file {raw_path.name} hash mismatch: "
-                    f"expected {pinned}, got {digest}"
-                )
+        if pinned is not None and digest != pinned:
+            raise ValueError(
+                f"{work_id}: raw file {raw_path.name} hash mismatch: "
+                f"expected {pinned}, got {digest}"
+            )
     else:
         raw_path = fetch_source(root, manifest)
 
     raw_text = raw_path.read_text(encoding="utf-8")
-    extractor = _lookup(EXTRACTORS, processing["extractor"], "extractor")
-    cleaner = _lookup(CLEANERS, processing["cleaner"], "cleaner")
     text = cleaner(extractor(raw_text))
 
-    modernizer_name = processing.get("modernizer")
-    if modernizer_name:
-        modernizer = _lookup(MODERNIZERS, modernizer_name, "modernizer")
+    if modernizer is not None:
         text, counts = modernizer(text, root)
         for old, count in sorted(counts.items()):
             print(f"Modernised {old!r}: {count} replacement(s)")

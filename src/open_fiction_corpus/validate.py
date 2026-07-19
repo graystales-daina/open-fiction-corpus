@@ -10,6 +10,10 @@ from jsonschema import Draft202012Validator
 
 from .prepare import (
     APPROVED_SOURCE_HOSTS,
+    CLEANERS,
+    EXTRACTORS,
+    MODERNIZERS,
+    PROVIDER_EXTRACTORS,
     gutenberg_artifact_error,
     is_approved_download_url,
 )
@@ -148,6 +152,30 @@ def collect_errors(root: Path) -> list[str]:
                 binding_error = gutenberg_artifact_error(source)
                 if binding_error:
                     errors.append(f"{path}: {binding_error}")
+
+            processing = manifest.get("processing")
+            if isinstance(processing, dict):
+                for field, registry in (
+                    ("extractor", EXTRACTORS),
+                    ("cleaner", CLEANERS),
+                    ("modernizer", MODERNIZERS),
+                ):
+                    name = processing.get(field)
+                    if isinstance(name, str) and name not in registry:
+                        errors.append(
+                            f"{path}: unknown {field} {name!r}; known: {sorted(registry)}"
+                        )
+                compatible = PROVIDER_EXTRACTORS.get(provider)
+                extractor_name = processing.get("extractor")
+                if (
+                    compatible is not None
+                    and isinstance(extractor_name, str)
+                    and extractor_name not in compatible
+                ):
+                    errors.append(
+                        f"{path}: provider '{provider}' requires an extractor "
+                        f"from {sorted(compatible)}"
+                    )
 
         classification = manifest.get("classification")
         if isinstance(classification, dict):

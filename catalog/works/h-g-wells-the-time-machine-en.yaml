@@ -53,10 +53,13 @@ rights:
     requires the pinned artifact - inspect pg35.txt to confirm it contains
     only Wells's text plus removable Gutenberg boilerplate, with no
     third-party introductions, notes, or annotations. The status stays
-    uncertain until that inspection is recorded. Any release before
-    1 January 2027 must exclude Spain from its distribution scope or
-    state the Spanish term prominently. Gutenberg boilerplate and platform
-    metadata are removed during extraction.
+    uncertain until that inspection is recorded. Because releases are
+    globally accessible and the build has no jurisdiction-scoped
+    distribution, the work must remain non-releasable until 1 January 2027
+    (expiry of the Spanish 80-year term) unless an enforceable regional
+    distribution mechanism is implemented first; a dataset-card notice is
+    not sufficient. Gutenberg boilerplate and platform metadata are
+    removed during extraction.
 
 classification:
   primary_genre: science-fiction
