@@ -27,24 +27,36 @@ rights:
   verified_jurisdictions: [US]
   unverified_jurisdictions: [EU, UK]
   evidence:
-    - The underlying work was first published in 1895 (Heinemann, London);
-      pre-1930 first publication places the work itself in the United States
-      public domain, and Project Gutenberg distributes ebook 35 with a
-      US public-domain clearance.
-    - H. G. Wells died on 13 August 1946. Simple life+70 expiry (1 January
-      2017) covers the underlying work in the EU and the UK, but longer
-      national terms preserved by Article 10 of Directive 2006/116/EC have
-      not been reviewed per member state.
-    - The exact Gutenberg transcription does not identify its source print
-      edition or its rights-relevant contributors, and Gutenberg makes no
-      copyright representation outside the US, so the edition-specific
-      redistribution basis for EU/UK is not yet reviewed.
+    - The work was first published in 1895 (Henry Holt, New York, 7 May;
+      Heinemann, London, 29 May); pre-1930 first publication places it in
+      the United States public domain, and Project Gutenberg distributes
+      ebook 35 with a US public-domain clearance.
+    - H. G. Wells died on 13 August 1946, so life+70 protection expired on
+      1 January 2017 in the UK and EU member states, with one identified
+      Article 10 (Directive 2006/116/EC) exception - Spain's transitional
+      80-year post-mortem term (1879 Act, authors deceased before
+      7 December 1987, held applicable to foreign authors by the Spanish
+      Supreme Court) protects the work in Spain until 1 January 2027.
+    - All known textual lineages of the work (1895 Holt, 1895 Heinemann,
+      the 1894-95 serials, and Wells's own 1924 Atlantic Edition revision,
+      which the named chapters of ebook 35 suggest) are authored by Wells
+      alone and were published before 1930, so the US and life+70
+      conclusions hold regardless of which lineage(s) the Gutenberg
+      transcription follows.
+    - A faithful transcription with trivial corrections does not meet the
+      EU originality threshold for separate protection, and the UK
+      typographical-arrangement right does not subsist in a plain-text
+      file, so no separate transcription right is expected once the
+      artifact inspection below confirms its contents.
   licence: null
-  notes: The underlying 1895 work is public domain; the status stays
-    uncertain until the exact Gutenberg transcription (ebook 35) and any
-    editorial contributions in it are cleared per the rights policy.
-    Gutenberg boilerplate and platform metadata are removed during
-    extraction.
+  notes: The rights analysis is complete except for one check that
+    requires the pinned artifact - inspect pg35.txt to confirm it contains
+    only Wells's text plus removable Gutenberg boilerplate, with no
+    third-party introductions, notes, or annotations. The status stays
+    uncertain until that inspection is recorded. Any release before
+    1 January 2027 must exclude Spain from its distribution scope or
+    state the Spanish term prominently. Gutenberg boilerplate and platform
+    metadata are removed during extraction.
 
 classification:
   primary_genre: science-fiction
