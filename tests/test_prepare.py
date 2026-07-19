@@ -241,6 +241,8 @@ def test_fetch_uses_download_url_and_project_user_agent(
         "example-work",
         **{
             "source.provider": "gutenberg",
+            "source.identifier": "999",
+            "source.url": "https://www.gutenberg.org/ebooks/999",
             "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
             "processing.source_sha256": GUTENBERG_SHA256,
         },
@@ -264,6 +266,8 @@ def test_fetch_hash_mismatch_writes_nothing(
         "example-work",
         **{
             "source.provider": "gutenberg",
+            "source.identifier": "999",
+            "source.url": "https://www.gutenberg.org/ebooks/999",
             "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
             "processing.source_sha256": "f" * 64,
         },
@@ -302,19 +306,22 @@ def test_fetch_rejects_unapproved_origins(tmp_path: Path, url: str) -> None:
 def test_redirects_to_unapproved_locations_are_refused() -> None:
     from open_fiction_corpus.prepare import _ApprovedRedirects
 
-    handler = _ApprovedRedirects(frozenset({"www.gutenberg.org"}))
-    request = urllib.request.Request("https://www.gutenberg.org/cache/epub/35/pg35.txt")
+    path = "/cache/epub/35/pg35.txt"
+    handler = _ApprovedRedirects(frozenset({"www.gutenberg.org", "gutenberg.org"}), path)
+    request = urllib.request.Request(f"https://www.gutenberg.org{path}")
     for bad in [
-        "https://evil.example/x.txt",
-        "http://www.gutenberg.org/x.txt",
-        "https://www.gutenberg.org:8443/x.txt",
+        "https://evil.example" + path,
+        "http://www.gutenberg.org" + path,
+        "https://www.gutenberg.org:8443" + path,
+        # Same approved host but a different artifact path.
+        "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
     ]:
         with pytest.raises(ValueError, match="unapproved location"):
             handler.redirect_request(request, None, 302, "Found", {}, bad)
     allowed = handler.redirect_request(
-        request, None, 302, "Found", {}, "https://www.gutenberg.org/other.txt"
+        request, None, 302, "Found", {}, f"https://gutenberg.org{path}"
     )
-    assert allowed.full_url == "https://www.gutenberg.org/other.txt"
+    assert allowed.full_url == f"https://gutenberg.org{path}"
 
 
 def test_fetch_rejects_oversized_downloads(
@@ -326,6 +333,8 @@ def test_fetch_rejects_oversized_downloads(
         "example-work",
         **{
             "source.provider": "gutenberg",
+            "source.identifier": "999",
+            "source.url": "https://www.gutenberg.org/ebooks/999",
             "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
             "processing.source_sha256": None,
         },
@@ -341,25 +350,55 @@ def test_fetch_rejects_oversized_downloads(
     assert not raw_dir.exists() or list(raw_dir.iterdir()) == []
 
 
-def test_fetch_ignores_hostile_remote_basenames(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    manifest = make_manifest(
-        "example-work",
-        **{
-            "source.provider": "gutenberg",
-            "source.download_url": "https://www.gutenberg.org/a/..%5C..%5CCON.txt",
-            "processing.source_sha256": GUTENBERG_SHA256,
-        },
-    )
+def test_fetch_rejects_urls_not_bound_to_the_identifier(tmp_path: Path) -> None:
+    # Hostile basenames and identifier/URL mismatches both fail the binding
+    # check before any network request; local paths never use the remote name.
+    for bad_url in [
+        "https://www.gutenberg.org/a/..%5C..%5CCON.txt",
+        "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+    ]:
+        manifest = make_manifest(
+            "example-work",
+            **{
+                "source.provider": "gutenberg",
+                "source.identifier": "999",
+                "source.url": "https://www.gutenberg.org/ebooks/999",
+                "source.download_url": bad_url,
+            },
+        )
+        root = make_root(tmp_path / bad_url[-9:-4], [(manifest, None)])
+        with pytest.raises(ValueError, match="pg999"):
+            fetch_source(root, manifest)
+
+
+def test_prepare_rejects_invalid_or_mismatched_work_ids(tmp_path: Path) -> None:
+    from helpers import write_manifest
+
+    manifest = make_manifest("example-work")
     root = make_root(tmp_path, [(manifest, None)])
-    _fake_network(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
 
-    raw_path = fetch_source(root, manifest)
+    with pytest.raises(ValueError, match="Invalid work id"):
+        prepare_work(root, "../evil")
 
-    raw_dir = root / "workspace" / "raw" / "example-work"
-    assert raw_path == raw_dir / "example-work.txt"
-    assert list(raw_dir.iterdir()) == [raw_path]
+    # A well-named manifest file whose id tries to traverse out of workspace/.
+    traversal = make_manifest("example-work")
+    traversal["id"] = "../../docs/cleaning-guide"
+    write_manifest(root, traversal, filename="safe.yaml")
+    with pytest.raises(ValueError, match="does not match"):
+        prepare_work(root, "safe")
+
+
+def test_raw_source_path_rejects_hostile_manifests(tmp_path: Path) -> None:
+    from open_fiction_corpus.prepare import raw_source_path
+
+    traversal = make_manifest("example-work")
+    traversal["id"] = "../../docs/cleaning-guide"
+    with pytest.raises(ValueError, match="Invalid work id"):
+        raw_source_path(tmp_path, traversal)
+
+    bad_format = make_manifest("example-work", **{"source.format": "pdf"})
+    with pytest.raises(ValueError, match="unknown source format"):
+        raw_source_path(tmp_path, bad_format)
 
 
 def test_fetch_requires_download_url(tmp_path: Path) -> None:
@@ -417,9 +456,24 @@ def test_validate_requires_download_url_for_gutenberg(tmp_path: Path) -> None:
             "source.download_url": "https://www.gutenberg.org:8443/pg35.txt",
         },
     )
+    mismatch = make_manifest(
+        "mismatch-book-en",
+        **{
+            "source.provider": "gutenberg",
+            "source.identifier": "35",
+            "source.url": "https://www.gutenberg.org/ebooks/35",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/2701/pg2701.txt",
+        },
+    )
     root = make_root(
         tmp_path,
-        [(missing, None), (trailing_slash, None), (unapproved, None), (odd_port, None)],
+        [
+            (missing, None),
+            (trailing_slash, None),
+            (unapproved, None),
+            (odd_port, None),
+            (mismatch, None),
+        ],
     )
 
     joined = "\n".join(collect_errors(root))
@@ -428,6 +482,8 @@ def test_validate_requires_download_url_for_gutenberg(tmp_path: Path) -> None:
     # Both the foreign host and the nonstandard port fail the origin check.
     assert joined.count("approved 'gutenberg' host") == 2
     assert "on port 443" in joined
+    # The identifier is bound to the artifact path.
+    assert "/cache/epub/35/pg35" in joined
 
 
 def test_failed_prepare_preserves_existing_clean_text(tmp_path: Path) -> None:

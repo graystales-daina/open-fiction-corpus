@@ -33,6 +33,11 @@ _MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
 
 _FORMAT_EXTENSIONS = {"txt": "txt", "xhtml": "xhtml", "html": "html", "epub": "epub", "markdown": "md"}
 
+# Same canonical pattern as schema/work.schema.json. Manifest files are
+# contributor input, so every id is re-checked here before it is ever used
+# as a path component - `ofc prepare` does not run the schema validator.
+_WORK_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
 
 def is_approved_download_url(url: str, hosts: frozenset[str]) -> bool:
     """True only for https URLs on an approved host at the default port 443.
@@ -49,13 +54,21 @@ def is_approved_download_url(url: str, hosts: frozenset[str]) -> bool:
 
 
 class _ApprovedRedirects(urllib.request.HTTPRedirectHandler):
-    """Follow redirects only to approved https origins."""
+    """Follow redirects only to approved https origins serving the same path.
 
-    def __init__(self, hosts: frozenset[str]) -> None:
+    Pinning the path means a redirect can never silently swap in a different
+    artifact than the one the manifest declares.
+    """
+
+    def __init__(self, hosts: frozenset[str], path: str) -> None:
         self.hosts = hosts
+        self.path = path
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        if not is_approved_download_url(newurl, self.hosts):
+        if (
+            not is_approved_download_url(newurl, self.hosts)
+            or urlsplit(newurl).path != self.path
+        ):
             raise ValueError(f"Refusing redirect to unapproved location: {newurl}")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -73,14 +86,58 @@ def _sha256(data: bytes) -> str:
 
 
 def raw_source_path(root: Path, manifest: dict[str, Any]) -> Path:
-    """The canonical location of a work's fetched raw artifact."""
-    extension = _FORMAT_EXTENSIONS[manifest["source"]["format"]]
-    return root / "workspace" / "raw" / manifest["id"] / f"{manifest['id']}.{extension}"
+    """The canonical location of a work's fetched raw artifact.
+
+    Validates the id and declared format before either is used, so a hostile
+    manifest can never produce a path outside workspace/raw/.
+    """
+    work_id = manifest.get("id")
+    if not isinstance(work_id, str) or not _WORK_ID_PATTERN.fullmatch(work_id):
+        raise ValueError(f"Invalid work id {work_id!r}")
+    source_format = manifest["source"].get("format")
+    if source_format not in _FORMAT_EXTENSIONS:
+        raise ValueError(
+            f"{work_id}: unknown source format {source_format!r}; "
+            f"known: {sorted(_FORMAT_EXTENSIONS)}"
+        )
+    extension = _FORMAT_EXTENSIONS[source_format]
+    return root / "workspace" / "raw" / work_id / f"{work_id}.{extension}"
+
+
+def gutenberg_artifact_error(source: dict[str, Any]) -> str | None:
+    """Why a gutenberg source's URLs do not match its identifier, else None.
+
+    Binds the exported provenance (source.identifier) to the recorded landing
+    page and to the artifact actually fetched, so the catalogue cannot claim
+    one ebook while downloading another.
+    """
+    identifier = source.get("identifier")
+    if not isinstance(identifier, str) or not identifier.isdigit():
+        return "source.identifier must be the Gutenberg ebook number (digits only)"
+    url = source.get("url")
+    if isinstance(url, str):
+        parts = urlsplit(url)
+        if (
+            parts.hostname in APPROVED_SOURCE_HOSTS["gutenberg"]
+            and parts.path.rstrip("/") != f"/ebooks/{identifier}"
+        ):
+            return f"source.url must be the ebook landing page /ebooks/{identifier}"
+    download_url = source.get("download_url")
+    if isinstance(download_url, str):
+        directory, _, basename = urlsplit(download_url).path.rpartition("/")
+        if directory != f"/cache/epub/{identifier}" or not basename.startswith(
+            f"pg{identifier}."
+        ):
+            return (
+                f"source.download_url must point at the "
+                f"/cache/epub/{identifier}/pg{identifier}.* artifact"
+            )
+    return None
 
 
 def _download(url: str, hosts: frozenset[str]) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    opener = urllib.request.build_opener(_ApprovedRedirects(hosts))
+    opener = urllib.request.build_opener(_ApprovedRedirects(hosts, urlsplit(url).path))
     try:
         with opener.open(request, timeout=60) as response:
             data = response.read(_MAX_DOWNLOAD_BYTES + 1)
@@ -116,6 +173,12 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
             f"{manifest['id']}: source.download_url must use https on an approved "
             f"'{provider}' host {sorted(hosts)} on port 443: {url}"
         )
+    if provider == "gutenberg":
+        binding_error = gutenberg_artifact_error(source)
+        if binding_error:
+            raise ValueError(f"{manifest['id']}: {binding_error}")
+    # Validates the id and declared format before any network request.
+    raw_path = raw_source_path(root, manifest)
 
     data = _download(url, hosts)
     digest = _sha256(data)
@@ -126,7 +189,6 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
             "nothing was written"
         )
 
-    raw_path = raw_source_path(root, manifest)
     raw_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = raw_path.with_name(raw_path.name + ".tmp")
     temporary.write_bytes(data)
@@ -270,10 +332,19 @@ def _lookup(registry: dict[str, Any], name: str, kind: str) -> Any:
 
 def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
     root = root.resolve()
+    # work_id and manifest contents are contributor input; check both against
+    # the canonical id pattern before either is used as a path component.
+    if not _WORK_ID_PATTERN.fullmatch(work_id):
+        raise ValueError(f"Invalid work id {work_id!r}")
     manifest_path = root / "catalog" / "works" / f"{work_id}.yaml"
     if not manifest_path.exists():
         raise FileNotFoundError(f"No manifest at {manifest_path}")
     manifest = _load_yaml(manifest_path)
+    if manifest.get("id") != work_id:
+        raise ValueError(
+            f"{manifest_path}: manifest id {manifest.get('id')!r} does not match "
+            f"the requested work '{work_id}'"
+        )
     processing = manifest["processing"]
 
     if skip_fetch:

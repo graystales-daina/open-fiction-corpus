@@ -8,7 +8,11 @@ from urllib.parse import urlsplit
 import yaml
 from jsonschema import Draft202012Validator
 
-from .prepare import APPROVED_SOURCE_HOSTS, is_approved_download_url
+from .prepare import (
+    APPROVED_SOURCE_HOSTS,
+    gutenberg_artifact_error,
+    is_approved_download_url,
+)
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -140,6 +144,10 @@ def collect_errors(root: Path) -> list[str]:
                         f"{path}: source.download_url must use https on an "
                         f"approved '{provider}' host {sorted(approved)} on port 443"
                     )
+            if provider == "gutenberg":
+                binding_error = gutenberg_artifact_error(source)
+                if binding_error:
+                    errors.append(f"{path}: {binding_error}")
 
         classification = manifest.get("classification")
         if isinstance(classification, dict):
