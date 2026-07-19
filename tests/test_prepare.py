@@ -422,6 +422,33 @@ def test_skip_fetch_rejects_stale_source_provenance(tmp_path: Path) -> None:
         prepare_work(root, "example-work", skip_fetch=True)
 
 
+def test_skip_fetch_runs_provider_preflight(tmp_path: Path) -> None:
+    """A stale raw+sidecar must not be preparable once the manifest's
+    provider-bound fields (e.g. the landing URL) are made invalid."""
+    gutenberg_999 = {
+        "source.provider": "gutenberg",
+        "source.identifier": "999",
+        "source.url": "https://www.gutenberg.org/ebooks/999",
+        "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
+        "processing.extractor": "gutenberg_txt_v1",
+        "processing.source_sha256": None,
+    }
+    manifest = make_manifest("example-work", **gutenberg_999)
+    root = make_root(tmp_path, [(manifest, None)])
+    _write_raw(root, manifest)
+
+    from helpers import write_manifest
+
+    changed = make_manifest(
+        "example-work",
+        **{**gutenberg_999, "source.url": "https://evil.example/ebooks/999"},
+    )
+    write_manifest(root, changed)
+
+    with pytest.raises(ValueError, match="landing page"):
+        prepare_work(root, "example-work", skip_fetch=True)
+
+
 def test_skip_fetch_requires_provenance_sidecar(tmp_path: Path) -> None:
     manifest = make_manifest(
         "example-work", **{"processing.source_sha256": None}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import shutil
 from pathlib import Path
 from typing import Any
@@ -59,6 +60,12 @@ def make_root(
     (root / "catalog" / "works").mkdir(parents=True)
     (root / "workspace" / "clean").mkdir(parents=True)
     for manifest, text in works:
+        if text is not None and manifest["quality"].get("reviewed_text_sha256") is None:
+            # Bind the fixture's review approval to its own text, matching
+            # what a real reviewer records after inspecting the output.
+            manifest["quality"]["reviewed_text_sha256"] = hashlib.sha256(
+                text.encode("utf-8")
+            ).hexdigest()
         write_manifest(root, manifest)
         if text is not None:
             text_path = root / "workspace" / "clean" / f"{manifest['id']}.txt"

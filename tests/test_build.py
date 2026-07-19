@@ -125,7 +125,10 @@ def test_unknown_pack_name_raises(tmp_path: Path) -> None:
 
 
 def test_missing_text_raises_unless_allowed(tmp_path: Path) -> None:
-    root = make_root(tmp_path, [(make_manifest("textless-book-en"), None)])
+    manifest = make_manifest(
+        "textless-book-en", **{"quality.reviewed_text_sha256": "0" * 64}
+    )
+    root = make_root(tmp_path, [(manifest, None)])
 
     with pytest.raises(FileNotFoundError):
         build_dataset(root)
@@ -139,6 +142,21 @@ def test_short_text_raises(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, "far too short")])
     with pytest.raises(ValueError, match="fewer than expected"):
         build_dataset(root)
+
+
+def test_build_refuses_clean_text_changed_after_review(tmp_path: Path) -> None:
+    manifest = make_manifest("tampered-book-en")
+    root = make_root(tmp_path, [(manifest, "the text the reviewer approved")])
+    text_path = root / "workspace" / "clean" / "tampered-book-en.txt"
+    text_path.write_text("regenerated text nobody reviewed", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="changed after review"):
+        build_dataset(root)
+
+    # Development builds may still use the unreviewed text explicitly.
+    build_dataset(root, allow_unreviewed=True)
+    rows = read_rows(root)
+    assert rows[0]["text"] == "regenerated text nobody reviewed"
 
 
 @pytest.mark.parametrize(
@@ -156,6 +174,23 @@ def test_release_gate_skips_unready_works(tmp_path: Path, override: dict) -> Non
     root = make_root(
         tmp_path, [(ready, "ready text ships"), (unready, "unready text stays local")]
     )
+
+    build_dataset(root)
+
+    assert [row["id"] for row in read_rows(root)] == ["ready-book-en"]
+
+
+def test_release_gate_requires_reviewed_text_hash(tmp_path: Path) -> None:
+    from helpers import write_manifest
+
+    ready = make_manifest("ready-book-en")
+    unready = make_manifest("unready-book-en")
+    root = make_root(
+        tmp_path, [(ready, "ready text ships"), (unready, "unready text stays local")]
+    )
+    # Clear the hash the fixture recorded: review without a pinned text.
+    unready["quality"]["reviewed_text_sha256"] = None
+    write_manifest(root, unready)
 
     build_dataset(root)
 

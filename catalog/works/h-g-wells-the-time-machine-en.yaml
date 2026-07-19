@@ -82,6 +82,7 @@ quality:
   reviewed_by: []
   review_notes: Pilot work; cleaned text not yet fetched or human-reviewed,
     and the exact source transcription is not yet rights-cleared for EU/UK.
+  reviewed_text_sha256: null
 
 processing:
   extractor: gutenberg_txt_v1

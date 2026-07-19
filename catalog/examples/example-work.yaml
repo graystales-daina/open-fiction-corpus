@@ -52,6 +52,7 @@ quality:
   flags: []
   reviewed_by: []
   review_notes: Not yet reviewed.
+  reviewed_text_sha256: null
 
 processing:
   extractor: plain_text_v1

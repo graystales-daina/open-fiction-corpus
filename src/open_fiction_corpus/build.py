@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import os
 import tempfile
@@ -94,6 +95,8 @@ def _release_readiness_problems(manifest: dict[str, Any]) -> list[str]:
         problems.append("source.revision is unpinned")
     if not manifest.get("processing", {}).get("source_sha256"):
         problems.append("processing.source_sha256 is not recorded")
+    if not quality.get("reviewed_text_sha256"):
+        problems.append("quality.reviewed_text_sha256 is not recorded")
     return problems
 
 
@@ -186,7 +189,17 @@ def build_dataset(
                     raise FileNotFoundError(
                         f"Missing cleaned text for {manifest['id']}: {text_path}"
                     )
-                text = text_path.read_text(encoding="utf-8").strip()
+                text_bytes = text_path.read_bytes()
+                text = text_bytes.decode("utf-8").strip()
+                if not allow_unreviewed:
+                    reviewed = manifest["quality"].get("reviewed_text_sha256")
+                    digest = hashlib.sha256(text_bytes).hexdigest()
+                    if digest != reviewed:
+                        raise ValueError(
+                            f"{manifest['id']}: cleaned text sha256 {digest} does not "
+                            f"match quality.reviewed_text_sha256 {reviewed}; the text "
+                            "changed after review and must be re-reviewed and repinned"
+                        )
                 minimum = manifest.get("processing", {}).get("expected_min_words")
                 if minimum and len(text.split()) < minimum:
                     raise ValueError(

@@ -180,6 +180,19 @@ def _download(url: str, hosts: frozenset[str]) -> bytes:
     return data
 
 
+def source_preflight_error(manifest: dict[str, Any]) -> str | None:
+    """Provider-specific source validation shared by every entry point.
+
+    Repository validation, the fetch path, and the --skip-fetch path all
+    call this, so no branch can prepare text from a manifest whose declared
+    source is invalid.
+    """
+    source = manifest["source"]
+    if source["provider"] == "gutenberg":
+        return gutenberg_artifact_error(source)
+    return None
+
+
 def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
     """Download the exact artifact named by source.download_url and verify its hash.
 
@@ -205,10 +218,9 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
             f"{manifest['id']}: source.download_url must use https on an approved "
             f"'{provider}' host {sorted(hosts)} on port 443: {url}"
         )
-    if provider == "gutenberg":
-        binding_error = gutenberg_artifact_error(source)
-        if binding_error:
-            raise ValueError(f"{manifest['id']}: {binding_error}")
+    preflight = source_preflight_error(manifest)
+    if preflight:
+        raise ValueError(f"{manifest['id']}: {preflight}")
     # Validates the id and declared format before any network request.
     raw_path = raw_source_path(root, manifest)
 
@@ -415,6 +427,12 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
             f"{work_id}: provider '{provider}' requires an extractor from "
             f"{sorted(compatible)}, got '{processing['extractor']}'"
         )
+    # Provider-specific source validation runs before the fetch/skip split,
+    # so --skip-fetch cannot prepare text from a manifest the fetch path
+    # (or repository validation) would reject.
+    preflight = source_preflight_error(manifest)
+    if preflight:
+        raise ValueError(f"{work_id}: {preflight}")
 
     if skip_fetch:
         # Only the canonical raw artifact qualifies: temporary files from an
@@ -488,5 +506,14 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
     temporary = clean_path.with_name(clean_path.name + ".tmp")
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(clean_path)
+
+    clean_digest = _sha256(text.encode("utf-8"))
     print(f"Prepared {work_id}: {words} words -> {clean_path}")
+    print(f"Clean text sha256 (pin as quality.reviewed_text_sha256): {clean_digest}")
+    reviewed = manifest["quality"].get("reviewed_text_sha256")
+    if reviewed and reviewed != clean_digest:
+        print(
+            "Warning: output differs from quality.reviewed_text_sha256; "
+            "the work must be re-reviewed and repinned before release."
+        )
     return clean_path
