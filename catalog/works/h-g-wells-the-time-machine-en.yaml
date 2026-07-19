@@ -23,18 +23,28 @@ source:
   format: txt
 
 rights:
-  status: public-domain
-  verified_jurisdictions: [US, EU, UK]
-  unverified_jurisdictions: []
+  status: uncertain
+  verified_jurisdictions: [US]
+  unverified_jurisdictions: [EU, UK]
   evidence:
-    - First published in 1895 (Heinemann, London); pre-1930 first publication
-      places the work in the United States public domain.
-    - H. G. Wells died on 13 August 1946, so life+70 protection expired on
-      1 January 2017 in the EU and the UK.
+    - The underlying work was first published in 1895 (Heinemann, London);
+      pre-1930 first publication places the work itself in the United States
+      public domain, and Project Gutenberg distributes ebook 35 with a
+      US public-domain clearance.
+    - H. G. Wells died on 13 August 1946. Simple life+70 expiry (1 January
+      2017) covers the underlying work in the EU and the UK, but longer
+      national terms preserved by Article 10 of Directive 2006/116/EC have
+      not been reviewed per member state.
+    - The exact Gutenberg transcription does not identify its source print
+      edition or its rights-relevant contributors, and Gutenberg makes no
+      copyright representation outside the US, so the edition-specific
+      redistribution basis for EU/UK is not yet reviewed.
   licence: null
-  notes: Original English work, no translation or later editorial material.
-    Source is the Project Gutenberg transcription (ebook 35); Gutenberg
-    boilerplate and platform metadata are removed during extraction.
+  notes: The underlying 1895 work is public domain; the status stays
+    uncertain until the exact Gutenberg transcription (ebook 35) and any
+    editorial contributions in it are cleared per the rights policy.
+    Gutenberg boilerplate and platform metadata are removed during
+    extraction.
 
 classification:
   primary_genre: science-fiction
@@ -53,9 +63,10 @@ content:
 
 quality:
   status: candidate
-  flags: []
+  flags: [uncertain-rights]
   reviewed_by: []
-  review_notes: Pilot work; cleaned text not yet fetched or human-reviewed.
+  review_notes: Pilot work; cleaned text not yet fetched or human-reviewed,
+    and the exact source transcription is not yet rights-cleared for EU/UK.
 
 processing:
   extractor: gutenberg_txt_v1

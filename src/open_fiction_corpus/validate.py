@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 import yaml
 from jsonschema import Draft202012Validator
 
+from .prepare import APPROVED_SOURCE_HOSTS
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
@@ -120,18 +122,24 @@ def collect_errors(root: Path) -> list[str]:
                     errors.append(f"{path}: source.{field} must be an absolute http(s) URL")
 
             download_url = source.get("download_url")
+            provider = source.get("provider")
             # Providers with a fetch adapter need the exact artifact named up
             # front, so a manifest ofc prepare would reject fails validation.
-            if source.get("provider") == "gutenberg" and not isinstance(download_url, str):
+            if provider in APPROVED_SOURCE_HOSTS and not isinstance(download_url, str):
                 errors.append(
-                    f"{path}: source.download_url is required for provider 'gutenberg'"
+                    f"{path}: source.download_url is required for provider '{provider}'"
                 )
-            if (
-                isinstance(download_url, str)
-                and _is_absolute_http_url(download_url)
-                and not urlsplit(download_url).path.rpartition("/")[2]
-            ):
-                errors.append(f"{path}: source.download_url must end in a file name")
+            if isinstance(download_url, str) and _is_absolute_http_url(download_url):
+                if not urlsplit(download_url).path.rpartition("/")[2]:
+                    errors.append(f"{path}: source.download_url must end in a file name")
+                approved = APPROVED_SOURCE_HOSTS.get(provider)
+                if approved is not None:
+                    parts = urlsplit(download_url)
+                    if parts.scheme != "https" or parts.hostname not in approved:
+                        errors.append(
+                            f"{path}: source.download_url must use https on an "
+                            f"approved '{provider}' host {sorted(approved)}"
+                        )
 
         classification = manifest.get("classification")
         if isinstance(classification, dict):

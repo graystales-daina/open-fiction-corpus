@@ -26,4 +26,6 @@ Automatic rules belong in versioned cleaners and modernisers. Work-specific corr
 
 ## Source access policy
 
+Manifests are contributor input, so the fetcher treats `source.download_url` as untrusted: it only contacts the approved https origins listed per provider in `APPROVED_SOURCE_HOSTS` (currently `www.gutenberg.org`/`gutenberg.org` for `gutenberg`), refuses redirects to anywhere else, caps downloads at 64 MiB, and stores raw artifacts under a project-controlled filename derived from the work id — the remote basename is never used for the local path. Adding an origin (for example an official Gutenberg mirror) is a reviewed code change.
+
 Fetching is deliberately conservative: one HTTP request per work per invocation, a descriptive project User-Agent, no automatic retries, and no crawling. Bulk or repeated downloading of gutenberg.org is not acceptable; if the catalogue grows to need bulk retrieval, use Project Gutenberg's official mirrors and document the chosen mirror here first. A recorded hash detects upstream changes but cannot recover old bytes once a source regenerates a file, so the release process will eventually need retained, content-addressed raw artifacts outside ordinary Git history (tracked in the pilot issue).

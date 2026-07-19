@@ -21,6 +21,31 @@ import yaml
 # see the source access policy in docs/cleaning-guide.md.
 _USER_AGENT = "open-fiction-corpus (+https://github.com/open-fiction-corpus/open-fiction-corpus)"
 
+# Approved https download origins per provider. Manifests are contributor
+# input, so the fetcher only ever contacts these hosts; adding one (e.g. an
+# official Gutenberg mirror) is a reviewed code change under the source
+# access policy.
+APPROVED_SOURCE_HOSTS: dict[str, frozenset[str]] = {
+    "gutenberg": frozenset({"www.gutenberg.org", "gutenberg.org"}),
+}
+
+_MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
+
+_FORMAT_EXTENSIONS = {"txt": "txt", "xhtml": "xhtml", "html": "html", "epub": "epub", "markdown": "md"}
+
+
+class _ApprovedRedirects(urllib.request.HTTPRedirectHandler):
+    """Follow redirects only to approved https origins."""
+
+    def __init__(self, hosts: frozenset[str]) -> None:
+        self.hosts = hosts
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parts = urlsplit(newurl)
+        if parts.scheme != "https" or parts.hostname not in self.hosts:
+            raise ValueError(f"Refusing redirect to unapproved location: {newurl}")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
 
 def _load_yaml(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
@@ -34,35 +59,47 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _download(url: str, hosts: frozenset[str]) -> bytes:
+    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+    opener = urllib.request.build_opener(_ApprovedRedirects(hosts))
+    try:
+        with opener.open(request, timeout=60) as response:
+            data = response.read(_MAX_DOWNLOAD_BYTES + 1)
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Failed to fetch {url}: {exc}") from exc
+    if len(data) > _MAX_DOWNLOAD_BYTES:
+        raise ValueError(f"{url} exceeds the {_MAX_DOWNLOAD_BYTES}-byte download limit")
+    return data
+
+
 def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
     """Download the exact artifact named by source.download_url and verify its hash.
 
-    The file is written to workspace/raw/<work-id>/ only after the hash check
-    passes, so a failed verification leaves nothing behind for a later
-    --skip-fetch run to trust.
+    Manifests are contributor input: the fetcher only contacts approved
+    provider origins, refuses redirects elsewhere, caps the response size,
+    and stores the artifact under a project-controlled filename derived from
+    the work id — the remote basename is never used. The file is written
+    only after the hash check passes, so a failed verification leaves
+    nothing behind for a later --skip-fetch run to trust.
     """
     source = manifest["source"]
     provider = source["provider"]
-    if provider != "gutenberg":
+    hosts = APPROVED_SOURCE_HOSTS.get(provider)
+    if hosts is None:
         raise ValueError(f"No fetcher for source provider '{provider}'")
     url = source.get("download_url")
     if not url:
         raise ValueError(
             f"{manifest['id']}: source.download_url must name the exact artifact to fetch"
         )
-    basename = urlsplit(url).path.rpartition("/")[2]
-    if not basename:
+    parts = urlsplit(url)
+    if parts.scheme != "https" or parts.hostname not in hosts:
         raise ValueError(
-            f"{manifest['id']}: source.download_url must end in a file name: {url}"
+            f"{manifest['id']}: source.download_url must use https on an approved "
+            f"'{provider}' host {sorted(hosts)}: {url}"
         )
 
-    request = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            data = response.read()
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Failed to fetch {url}: {exc}") from exc
-
+    data = _download(url, hosts)
     digest = _sha256(data)
     pinned = manifest.get("processing", {}).get("source_sha256")
     if pinned is not None and digest != pinned:
@@ -73,7 +110,7 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
 
     raw_dir = root / "workspace" / "raw" / manifest["id"]
     raw_dir.mkdir(parents=True, exist_ok=True)
-    raw_path = raw_dir / basename
+    raw_path = raw_dir / f"{manifest['id']}.{_FORMAT_EXTENSIONS[source['format']]}"
     temporary = raw_path.with_name(raw_path.name + ".tmp")
     temporary.write_bytes(data)
     temporary.replace(raw_path)

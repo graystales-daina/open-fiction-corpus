@@ -56,14 +56,18 @@ class _FakeResponse(io.BytesIO):
         return False
 
 
-def _make_response(payload: bytes) -> _FakeResponse:
-    return _FakeResponse(payload)
+def _fake_network(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> dict:
+    """Replace the fetcher's opener; returns a dict capturing the request."""
+    seen: dict = {}
 
+    class FakeOpener:
+        def open(self, request, timeout):
+            seen["url"] = request.full_url
+            seen["user_agent"] = request.get_header("User-agent")
+            return _FakeResponse(payload)
 
-def _fake_urlopen(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> None:
-    monkeypatch.setattr(
-        urllib.request, "urlopen", lambda request, timeout: _make_response(payload)
-    )
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *handlers: FakeOpener())
+    return seen
 
 
 def test_extract_strips_header_footer_and_credits() -> None:
@@ -219,24 +223,19 @@ def test_fetch_uses_download_url_and_project_user_agent(
         "example-work",
         **{
             "source.provider": "gutenberg",
-            "source.download_url": "https://example.invalid/cache/pg999.txt",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
             "processing.source_sha256": GUTENBERG_SHA256,
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
-    seen = {}
+    seen = _fake_network(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
 
-    def fake_urlopen(request, timeout):
-        seen["url"] = request.full_url
-        seen["user_agent"] = request.get_header("User-agent")
-        return _make_response(GUTENBERG_FILE.encode("utf-8"))
-
-    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     raw_path = fetch_source(root, manifest)
 
-    assert seen["url"] == "https://example.invalid/cache/pg999.txt"
+    assert seen["url"] == "https://www.gutenberg.org/cache/epub/999/pg999.txt"
     assert "open-fiction-corpus" in seen["user_agent"]
-    assert raw_path.name == "pg999.txt"
+    # The remote basename is ignored: the local name derives from the work id.
+    assert raw_path.name == "example-work.txt"
     assert raw_path.read_text(encoding="utf-8") == GUTENBERG_FILE
 
 
@@ -247,18 +246,97 @@ def test_fetch_hash_mismatch_writes_nothing(
         "example-work",
         **{
             "source.provider": "gutenberg",
-            "source.download_url": "https://example.invalid/cache/pg999.txt",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
             "processing.source_sha256": "f" * 64,
         },
     )
     root = make_root(tmp_path, [(manifest, None)])
-    _fake_urlopen(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
+    _fake_network(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
 
     with pytest.raises(ValueError, match="hash mismatch"):
         fetch_source(root, manifest)
 
     raw_dir = root / "workspace" / "raw" / "example-work"
     assert not raw_dir.exists() or list(raw_dir.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://localhost/pg999.txt",
+        "https://127.0.0.1/pg999.txt",
+        "https://192.168.1.10/pg999.txt",
+        "https://evil.example/pg999.txt",
+        "http://www.gutenberg.org/cache/epub/999/pg999.txt",
+    ],
+)
+def test_fetch_rejects_unapproved_origins(tmp_path: Path, url: str) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{"source.provider": "gutenberg", "source.download_url": url},
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    with pytest.raises(ValueError, match="approved 'gutenberg' host"):
+        fetch_source(root, manifest)
+
+
+def test_redirects_to_unapproved_locations_are_refused() -> None:
+    from open_fiction_corpus.prepare import _ApprovedRedirects
+
+    handler = _ApprovedRedirects(frozenset({"www.gutenberg.org"}))
+    request = urllib.request.Request("https://www.gutenberg.org/cache/epub/35/pg35.txt")
+    for bad in ["https://evil.example/x.txt", "http://www.gutenberg.org/x.txt"]:
+        with pytest.raises(ValueError, match="unapproved location"):
+            handler.redirect_request(request, None, 302, "Found", {}, bad)
+    allowed = handler.redirect_request(
+        request, None, 302, "Found", {}, "https://www.gutenberg.org/other.txt"
+    )
+    assert allowed.full_url == "https://www.gutenberg.org/other.txt"
+
+
+def test_fetch_rejects_oversized_downloads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from open_fiction_corpus import prepare as prepare_module
+
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://www.gutenberg.org/cache/epub/999/pg999.txt",
+            "processing.source_sha256": None,
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    monkeypatch.setattr(prepare_module, "_MAX_DOWNLOAD_BYTES", 8)
+    _fake_network(monkeypatch, b"more than eight bytes")
+
+    with pytest.raises(ValueError, match="download limit"):
+        fetch_source(root, manifest)
+
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    assert not raw_dir.exists() or list(raw_dir.iterdir()) == []
+
+
+def test_fetch_ignores_hostile_remote_basenames(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://www.gutenberg.org/a/..%5C..%5CCON.txt",
+            "processing.source_sha256": GUTENBERG_SHA256,
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    _fake_network(monkeypatch, GUTENBERG_FILE.encode("utf-8"))
+
+    raw_path = fetch_source(root, manifest)
+
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    assert raw_path == raw_dir / "example-work.txt"
+    assert list(raw_dir.iterdir()) == [raw_path]
 
 
 def test_fetch_requires_download_url(tmp_path: Path) -> None:
@@ -302,24 +380,21 @@ def test_validate_requires_download_url_for_gutenberg(tmp_path: Path) -> None:
     trailing_slash = make_manifest(
         "slash-book-en", **{"source.download_url": "https://example.invalid/dir/"}
     )
-    root = make_root(tmp_path, [(missing, None), (trailing_slash, None)])
+    unapproved = make_manifest(
+        "unapproved-book-en",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://evil.example/pg35.txt",
+        },
+    )
+    root = make_root(
+        tmp_path, [(missing, None), (trailing_slash, None), (unapproved, None)]
+    )
 
     joined = "\n".join(collect_errors(root))
     assert "source.download_url is required for provider 'gutenberg'" in joined
     assert "source.download_url must end in a file name" in joined
-
-
-def test_fetch_rejects_download_url_without_file_name(tmp_path: Path) -> None:
-    manifest = make_manifest(
-        "example-work",
-        **{
-            "source.provider": "gutenberg",
-            "source.download_url": "https://example.invalid/dir/",
-        },
-    )
-    root = make_root(tmp_path, [(manifest, None)])
-    with pytest.raises(ValueError, match="must end in a file name"):
-        fetch_source(root, manifest)
+    assert "approved 'gutenberg' host" in joined
 
 
 def test_failed_prepare_preserves_existing_clean_text(tmp_path: Path) -> None:
