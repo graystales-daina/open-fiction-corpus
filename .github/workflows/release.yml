@@ -45,12 +45,23 @@ jobs:
       - run: pytest
       - run: ofc validate
 
-      # TODO(source adapters): fetch the pinned upstream sources and produce
-      # cleaned texts under workspace/clean/ before building. Until adapters
-      # exist, the build tolerates missing texts and the guard below refuses
-      # to publish a release with zero rows.
+      # Fetch and clean every catalogued work through the manifest-driven
+      # pipeline: approved origins only, hash verification before writing,
+      # provenance sidecars, versioned extractors/cleaners/modernisers.
+      # The rights and release-readiness gates inside `ofc build` decide
+      # what actually enters the exports.
+      - name: Prepare source texts
+        run: |
+          python - <<'EOF'
+          import pathlib
+          import subprocess
+
+          for path in sorted(pathlib.Path("catalog/works").glob("*.yaml")):
+              subprocess.run(["ofc", "prepare", path.stem], check=True)
+          EOF
+
       - name: Build whole-catalogue export
-        run: ofc build --allow-missing-text
+        run: ofc build
 
       - name: Build pack exports
         run: |
@@ -61,10 +72,7 @@ jobs:
 
           for path in sorted(pathlib.Path("packs").rglob("*.yaml")):
               name = yaml.safe_load(path.read_text(encoding="utf-8"))["name"]
-              subprocess.run(
-                  ["ofc", "build", "--pack", name, "--allow-missing-text"],
-                  check=True,
-              )
+              subprocess.run(["ofc", "build", "--pack", name], check=True)
           EOF
 
       - name: Assemble release directory
