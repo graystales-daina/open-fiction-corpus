@@ -34,6 +34,20 @@ _MAX_DOWNLOAD_BYTES = 64 * 1024 * 1024
 _FORMAT_EXTENSIONS = {"txt": "txt", "xhtml": "xhtml", "html": "html", "epub": "epub", "markdown": "md"}
 
 
+def is_approved_download_url(url: str, hosts: frozenset[str]) -> bool:
+    """True only for https URLs on an approved host at the default port 443.
+
+    The single authority for origin approval: validation, the initial fetch,
+    and every redirect all use this check, so they cannot drift apart.
+    """
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return False
+    return parts.scheme == "https" and parts.hostname in hosts and port in (None, 443)
+
+
 class _ApprovedRedirects(urllib.request.HTTPRedirectHandler):
     """Follow redirects only to approved https origins."""
 
@@ -41,8 +55,7 @@ class _ApprovedRedirects(urllib.request.HTTPRedirectHandler):
         self.hosts = hosts
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        parts = urlsplit(newurl)
-        if parts.scheme != "https" or parts.hostname not in self.hosts:
+        if not is_approved_download_url(newurl, self.hosts):
             raise ValueError(f"Refusing redirect to unapproved location: {newurl}")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -57,6 +70,12 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def raw_source_path(root: Path, manifest: dict[str, Any]) -> Path:
+    """The canonical location of a work's fetched raw artifact."""
+    extension = _FORMAT_EXTENSIONS[manifest["source"]["format"]]
+    return root / "workspace" / "raw" / manifest["id"] / f"{manifest['id']}.{extension}"
 
 
 def _download(url: str, hosts: frozenset[str]) -> bytes:
@@ -92,11 +111,10 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
         raise ValueError(
             f"{manifest['id']}: source.download_url must name the exact artifact to fetch"
         )
-    parts = urlsplit(url)
-    if parts.scheme != "https" or parts.hostname not in hosts:
+    if not is_approved_download_url(url, hosts):
         raise ValueError(
             f"{manifest['id']}: source.download_url must use https on an approved "
-            f"'{provider}' host {sorted(hosts)}: {url}"
+            f"'{provider}' host {sorted(hosts)} on port 443: {url}"
         )
 
     data = _download(url, hosts)
@@ -108,9 +126,8 @@ def fetch_source(root: Path, manifest: dict[str, Any]) -> Path:
             "nothing was written"
         )
 
-    raw_dir = root / "workspace" / "raw" / manifest["id"]
-    raw_dir.mkdir(parents=True, exist_ok=True)
-    raw_path = raw_dir / f"{manifest['id']}.{_FORMAT_EXTENSIONS[source['format']]}"
+    raw_path = raw_source_path(root, manifest)
+    raw_path.parent.mkdir(parents=True, exist_ok=True)
     temporary = raw_path.with_name(raw_path.name + ".tmp")
     temporary.write_bytes(data)
     temporary.replace(raw_path)
@@ -260,13 +277,13 @@ def prepare_work(root: Path, work_id: str, *, skip_fetch: bool = False) -> Path:
     processing = manifest["processing"]
 
     if skip_fetch:
-        raw_dir = root / "workspace" / "raw" / work_id
-        raw_files = sorted(raw_dir.glob("*")) if raw_dir.exists() else []
-        if len(raw_files) != 1:
+        # Only the canonical raw artifact qualifies: temporary files from an
+        # interrupted fetch or strays from older pipeline versions never do.
+        raw_path = raw_source_path(root, manifest)
+        if not raw_path.is_file():
             raise FileNotFoundError(
-                f"--skip-fetch needs exactly one raw file under {raw_dir}"
+                f"--skip-fetch requires the fetched raw file at {raw_path}"
             )
-        raw_path = raw_files[0]
         pinned = processing.get("source_sha256")
         if pinned is not None:
             digest = _sha256(raw_path.read_bytes())

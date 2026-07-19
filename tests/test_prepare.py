@@ -129,7 +129,7 @@ def test_prepare_work_end_to_end(tmp_path: Path, capsys: pytest.CaptureFixture) 
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
     raw_dir.mkdir(parents=True)
-    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
 
     clean_path = prepare_work(root, "example-work", skip_fetch=True)
 
@@ -154,7 +154,7 @@ def test_prepare_work_applies_overrides(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
     raw_dir.mkdir(parents=True)
-    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
     overrides_dir = root / "overrides"
     overrides_dir.mkdir()
     (overrides_dir / "example-work.yaml").write_text(
@@ -190,7 +190,7 @@ def test_prepare_work_rejects_unknown_extractor(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
     raw_dir.mkdir(parents=True)
-    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
     with pytest.raises(ValueError, match="Unknown extractor"):
         prepare_work(root, "example-work", skip_fetch=True)
 
@@ -204,6 +204,24 @@ def test_overrides_reject_missing_or_invalid_count(tmp_path: Path) -> None:
             apply_overrides("a", path)
 
 
+def test_skip_fetch_rejects_leftover_temp_file(tmp_path: Path) -> None:
+    manifest = make_manifest(
+        "example-work",
+        **{
+            "processing.extractor": "gutenberg_txt_v1",
+            "processing.source_sha256": None,
+        },
+    )
+    root = make_root(tmp_path, [(manifest, None)])
+    raw_dir = root / "workspace" / "raw" / "example-work"
+    raw_dir.mkdir(parents=True)
+    # Only a crash-leftover temporary from an interrupted, unpinned fetch.
+    (raw_dir / "example-work.txt.tmp").write_text(GUTENBERG_FILE, encoding="utf-8")
+
+    with pytest.raises(FileNotFoundError, match="example-work.txt"):
+        prepare_work(root, "example-work", skip_fetch=True)
+
+
 def test_skip_fetch_verifies_pinned_hash(tmp_path: Path) -> None:
     manifest = make_manifest(
         "example-work", **{"processing.extractor": "gutenberg_txt_v1"}
@@ -211,7 +229,7 @@ def test_skip_fetch_verifies_pinned_hash(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, None)])
     raw_dir = root / "workspace" / "raw" / "example-work"
     raw_dir.mkdir(parents=True)
-    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
     with pytest.raises(ValueError, match="hash mismatch"):
         prepare_work(root, "example-work", skip_fetch=True)
 
@@ -268,6 +286,7 @@ def test_fetch_hash_mismatch_writes_nothing(
         "https://192.168.1.10/pg999.txt",
         "https://evil.example/pg999.txt",
         "http://www.gutenberg.org/cache/epub/999/pg999.txt",
+        "https://www.gutenberg.org:8443/cache/epub/999/pg999.txt",
     ],
 )
 def test_fetch_rejects_unapproved_origins(tmp_path: Path, url: str) -> None:
@@ -285,7 +304,11 @@ def test_redirects_to_unapproved_locations_are_refused() -> None:
 
     handler = _ApprovedRedirects(frozenset({"www.gutenberg.org"}))
     request = urllib.request.Request("https://www.gutenberg.org/cache/epub/35/pg35.txt")
-    for bad in ["https://evil.example/x.txt", "http://www.gutenberg.org/x.txt"]:
+    for bad in [
+        "https://evil.example/x.txt",
+        "http://www.gutenberg.org/x.txt",
+        "https://www.gutenberg.org:8443/x.txt",
+    ]:
         with pytest.raises(ValueError, match="unapproved location"):
             handler.redirect_request(request, None, 302, "Found", {}, bad)
     allowed = handler.redirect_request(
@@ -387,14 +410,24 @@ def test_validate_requires_download_url_for_gutenberg(tmp_path: Path) -> None:
             "source.download_url": "https://evil.example/pg35.txt",
         },
     )
+    odd_port = make_manifest(
+        "odd-port-book-en",
+        **{
+            "source.provider": "gutenberg",
+            "source.download_url": "https://www.gutenberg.org:8443/pg35.txt",
+        },
+    )
     root = make_root(
-        tmp_path, [(missing, None), (trailing_slash, None), (unapproved, None)]
+        tmp_path,
+        [(missing, None), (trailing_slash, None), (unapproved, None), (odd_port, None)],
     )
 
     joined = "\n".join(collect_errors(root))
     assert "source.download_url is required for provider 'gutenberg'" in joined
     assert "source.download_url must end in a file name" in joined
-    assert "approved 'gutenberg' host" in joined
+    # Both the foreign host and the nonstandard port fail the origin check.
+    assert joined.count("approved 'gutenberg' host") == 2
+    assert "on port 443" in joined
 
 
 def test_failed_prepare_preserves_existing_clean_text(tmp_path: Path) -> None:
@@ -408,7 +441,7 @@ def test_failed_prepare_preserves_existing_clean_text(tmp_path: Path) -> None:
     root = make_root(tmp_path, [(manifest, "previously valid clean text")])
     raw_dir = root / "workspace" / "raw" / "example-work"
     raw_dir.mkdir(parents=True)
-    (raw_dir / "pg999.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
+    (raw_dir / "example-work.txt").write_text(GUTENBERG_FILE, encoding="utf-8")
     overrides_dir = root / "overrides"
     overrides_dir.mkdir()
     (overrides_dir / "example-work.yaml").write_text(

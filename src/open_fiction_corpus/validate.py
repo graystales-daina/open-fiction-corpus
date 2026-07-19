@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 import yaml
 from jsonschema import Draft202012Validator
 
-from .prepare import APPROVED_SOURCE_HOSTS
+from .prepare import APPROVED_SOURCE_HOSTS, is_approved_download_url
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -133,13 +133,13 @@ def collect_errors(root: Path) -> list[str]:
                 if not urlsplit(download_url).path.rpartition("/")[2]:
                     errors.append(f"{path}: source.download_url must end in a file name")
                 approved = APPROVED_SOURCE_HOSTS.get(provider)
-                if approved is not None:
-                    parts = urlsplit(download_url)
-                    if parts.scheme != "https" or parts.hostname not in approved:
-                        errors.append(
-                            f"{path}: source.download_url must use https on an "
-                            f"approved '{provider}' host {sorted(approved)}"
-                        )
+                if approved is not None and not is_approved_download_url(
+                    download_url, approved
+                ):
+                    errors.append(
+                        f"{path}: source.download_url must use https on an "
+                        f"approved '{provider}' host {sorted(approved)} on port 443"
+                    )
 
         classification = manifest.get("classification")
         if isinstance(classification, dict):
