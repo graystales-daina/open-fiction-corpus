@@ -238,6 +238,59 @@ def test_missing_text_raises_unless_allowed(tmp_path: Path) -> None:
     assert read_rows(root) == []
 
 
+def test_build_output_is_byte_reproducible(tmp_path: Path) -> None:
+    import time
+
+    manifest = make_manifest("repro-book-en")
+    root = make_root(tmp_path, [(manifest, "identical inputs identical bytes")])
+
+    build_dataset(root)
+    first = (root / "dist" / "books.jsonl.gz").read_bytes()
+    time.sleep(1.1)  # a changed wall clock must not change the output
+    build_dataset(root)
+    second = (root / "dist" / "books.jsonl.gz").read_bytes()
+
+    assert first == second
+    # No stored filename or mtime in the gzip header (bytes 3-7 are flags+mtime).
+    assert first[3] == 0 and first[4:8] == b"\x00\x00\x00\x00"
+
+
+def test_release_assembly_is_byte_reproducible(tmp_path: Path) -> None:
+    import subprocess
+    import sys
+
+    manifest = make_manifest("repro-book-en")
+    root = make_root(tmp_path, [(manifest, "identical inputs identical bytes")])
+    build_dataset(root)
+
+    script = Path(__file__).resolve().parents[1] / "scripts" / "assemble_release.py"
+
+    def assemble(output: Path) -> None:
+        subprocess.run(
+            [
+                sys.executable, str(script),
+                "--version", "v0.1.0",
+                "--commit", "deadbeef",
+                "--built-at", "2026-07-20T00:00:00+00:00",
+                "--dist", str(root / "dist"),
+                "--output", str(output),
+            ],
+            check=True,
+        )
+
+    assemble(root / "release-a")
+    assemble(root / "release-b")
+
+    for relative in [
+        "data/books.jsonl.gz",
+        "release/build-manifest.json",
+        "release/checksums.sha256",
+    ]:
+        assert (root / "release-a" / relative).read_bytes() == (
+            root / "release-b" / relative
+        ).read_bytes(), relative
+
+
 def test_short_text_raises(tmp_path: Path) -> None:
     manifest = make_manifest("short-book-en", **{"processing.expected_min_words": 100})
     root = make_root(tmp_path, [(manifest, "far too short")])

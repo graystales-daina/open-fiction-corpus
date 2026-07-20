@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import hashlib
+import io
 import json
 import os
 import tempfile
@@ -217,7 +218,14 @@ def build_dataset(
 
     written = 0
     try:
-        with gzip.open(temporary_path, "wt", encoding="utf-8", newline="\n") as output:
+        # Deterministic gzip: no stored filename and a fixed mtime, so two
+        # builds from identical inputs produce byte-identical output and the
+        # release checksum is reproducible from the tagged revision.
+        with open(temporary_path, "wb") as raw_output, gzip.GzipFile(
+            fileobj=raw_output, mode="wb", filename="", mtime=0
+        ) as gzip_output, io.TextIOWrapper(
+            gzip_output, encoding="utf-8", newline="\n"
+        ) as output:
             for manifest in gated:
                 text_path = root / "workspace" / "clean" / f"{manifest['id']}.txt"
                 if not text_path.exists():
