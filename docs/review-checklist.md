@@ -12,7 +12,9 @@ gates, but a person must read the text and make the calls.
 ## 0. Prepare the text
 
 Run `ofc prepare <work-id>` — locally, or via the **Prepare work** GitHub
-Action. It fetches the pinned artifact, cleans it, and prints two hashes:
+Action. It fetches the artifact declared by the manifest (verifying
+`processing.source_sha256` when it is set, and printing the digest you need
+for the initial pin when it is not), cleans it, and prints two hashes:
 
 - the **raw source** SHA-256 (record as `processing.source_sha256`);
 - the **cleaned text** SHA-256 (record as `quality.reviewed_text_sha256`).
@@ -23,9 +25,10 @@ below require a local prepare run.
 
 ## 1. Rights — inspect the exact artifact
 
-Open `workspace/raw/<work-id>/<work-id>.txt` and confirm it contains **only
-the author's own text plus Project Gutenberg boilerplate** (which the
-extractor strips). Specifically, there must be no third-party:
+Open the raw artifact under `workspace/raw/<work-id>/` (named
+`<work-id>.<ext>` for the manifest's declared `source.format`) and confirm it
+contains **only the author's own text plus Project Gutenberg boilerplate**
+(which the extractor strips). Specifically, there must be no third-party:
 
 - introduction, preface, or foreword by an editor;
 - explanatory notes, footnotes, or annotations;
@@ -35,6 +38,14 @@ If any such material is present, it must be excluded by the extractor (or the
 work deferred) — do not simply accept it into the corpus. Re-confirm the
 author, edition hints, and dates against the rights evidence already recorded
 in the manifest.
+
+**Source credits**: capture the production credits shown on the source
+landing page and in the artifact header (for Gutenberg, the "Produced by" /
+"Credits" line) and record them as `contributors` with `role: other`. Decide
+whether each credit is merely a faithful-transcription credit (not separately
+rights-bearing) or is rights-relevant — a named translator, editor,
+annotator, or author of included apparatus — which would change the analysis.
+Known credits are never left blank.
 
 ## 2. Quality — inspect the cleaned text
 

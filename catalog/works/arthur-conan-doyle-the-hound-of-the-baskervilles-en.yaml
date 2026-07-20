@@ -8,7 +8,15 @@ authors:
     birth_year: 1859
     death_year: 1930
 
-contributors: []
+contributors:
+  # Project Gutenberg transcription/production credits from the ebook 2852
+  # metadata and the pg2852.txt header. Recorded for provenance; a faithful
+  # transcription with trivial corrections is not separately rights-bearing
+  # (see rights.evidence).
+  - name: Shreevatsa R
+    role: other
+  - name: David Widger
+    role: other
 
 publication:
   original_year: 1902
