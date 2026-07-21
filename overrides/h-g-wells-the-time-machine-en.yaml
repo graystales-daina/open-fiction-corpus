@@ -16,3 +16,12 @@ corrections:
       left single quotation marks (U+2018) instead of an opening/closing
       pair. Corrects the second mark to a right single quotation mark
       (U+2019) to match standard pairing; the word itself is unchanged.
+  - find: "that . . . very clear"
+    replace: "that … very clear"
+    count: 1
+    note: >-
+      Transcription artifact, not a deliberate punctuation choice: this is
+      the only spaced-period ellipsis in the text; the other 4 ellipses all
+      use the single ellipsis character (…). Normalised to match so the
+      corpus doesn't teach two visually similar but distinct token
+      sequences for the same mark.
