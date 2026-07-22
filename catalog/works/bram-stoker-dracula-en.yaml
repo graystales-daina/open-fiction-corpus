@@ -51,16 +51,16 @@ rights:
       artifact inspection below confirms its contents.
   licence: null
   notes: The underlying 1897 work is public domain in every reviewed
-    jurisdiction. The status stays uncertain only until the exact Gutenberg
-    transcription (ebook 345) is inspected to confirm it contains solely
-    Stoker's text plus removable Gutenberg boilerplate and publisher
-    back-matter, with no third-party introductions, notes, or annotations;
-    on a clean inspection it flips to public-domain with US, UK, and EU all
-    verified (no jurisdiction carve-out). This transcription is a Grosset &
-    Dunlap reprint edition whose back matter includes several pages of
-    publisher advertising for unrelated titles after the novel's real
-    ending; that advertising is not part of the work and must be excluded
-    during extraction, the same as Gutenberg boilerplate.
+    jurisdiction. The exact Gutenberg transcription (ebook 345) has been
+    inspected and contains solely Stoker's text plus removable Gutenberg
+    boilerplate and Grosset & Dunlap publisher front/back matter (a title
+    page with copyright notice, and several pages of advertising for
+    unrelated titles) - no third-party introductions, notes, or
+    annotations; that publisher matter is excluded during extraction, the
+    same as Gutenberg boilerplate. The remaining gate before flipping to
+    public-domain (with US, UK, and EU all verified, no jurisdiction
+    carve-out) is the second maintainer sanity-check of this rights
+    section, per docs/review-checklist.md.
 
 classification:
   primary_genre: horror
@@ -81,8 +81,13 @@ quality:
   status: candidate
   flags: [uncertain-rights]
   reviewed_by: []
-  review_notes: Backlog pick (#21); cleaned text not yet fetched or
-    human-reviewed.
+  review_notes: Prepared from the pinned Gutenberg artifact (#21); word
+    count 160,899 against expected_min_words 150000, all 27 chapters
+    verified present and in order, modernisation counts checked as
+    proportional for the length, and several interior passages sampled
+    (including Van Helsing's dialect, kept untouched). Automated and
+    preliminary content checks are complete; awaiting the maintainer's
+    full human read-through, reviewed_by, and reviewed_text_sha256.
   reviewed_text_sha256: null
 
 processing:

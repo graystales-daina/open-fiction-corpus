@@ -75,3 +75,26 @@ corrections:
       corpus's own markdown-lite contract. Re-wraps each paragraph of the
       letter's sign-off individually so the italics survive without
       redistributing across paragraph boundaries; no wording changed.
+  - find: "...."
+    replace: ".…"
+    count: 63
+    note: >-
+      Every one of these terminal four-dot runs is a sentence-ending
+      period followed by a trailing-off ellipsis (verified: all 63 end a
+      paragraph on what would otherwise be a bare "."), distinct in
+      meaning from the mid-sentence three-dot form below - this
+      normalizes only the encoding (ASCII periods to the corpus's U+2026
+      convention, per docs/cleaning-guide.md) while keeping that
+      distinction intact, rather than collapsing both forms into one
+      character. Must run before the three-dot rule so it isn't
+      double-matched.
+  - find: "..."
+    replace: "…"
+    count: 15
+    note: >-
+      The three-dot form is used either mid-sentence for hesitation
+      ("the ... the ... the ... Vampire") or after "!"/"?", which already
+      supplies its own terminal punctuation - never as a sentence-ending
+      period. Normalizes the encoding only; the semantic distinction from
+      the four-dot form above is preserved (that one becomes ".…", this
+      one becomes "…" alone).
