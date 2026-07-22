@@ -81,16 +81,24 @@ quality:
   flags: [uncertain-rights]
   reviewed_by: []
   review_notes: Backlog pick (#19). Prepared from the pinned Gutenberg
-    artifact; word count 185,364 against expected_min_words 180000, all
+    artifact; word count 185,228 against expected_min_words 180000, all
     38 chapters verified present and in order (the last, "CHAPTER
     XXXVIII—CONCLUSION", correctly carries its dual heading from the
     source). The text starts with the actual work - title, Brontë's
     dedication to Thackeray, her second-edition preface - with the 1897
     Service & Paton edition's publisher imprint and illustrations-
-    copyright notice excluded (see overrides); no illustration markers
-    are present in this transcription. Automated and preliminary content
-    checks are complete; awaiting the maintainer's full human
-    read-through, reviewed_by, and reviewed_text_sha256.
+    copyright notice excluded (see overrides). This transcription carries
+    no [Illustration ...] markers, but it does carry the illustrations'
+    captions themselves as bare, unmarked duplicate paragraphs scattered
+    through the body (confirmed against Gutenberg's separate HTML
+    edition of the same ebook, which places each exact phrase as an
+    image caption); all 13 found are excluded via override. Known open
+    gap, not yet addressed - a handful of short verse/song passages (e.g.
+    ch. 3's "In the days when we went gipsying") have their line breaks
+    flattened by fiction_clean_v1, which is prose-only by design - see
+    the open PR discussion for the fix approach. Automated and preliminary
+    content checks are otherwise complete; awaiting the maintainer's full
+    human read-through, reviewed_by, and reviewed_text_sha256.
   reviewed_text_sha256: null
 
 processing:

@@ -10,3 +10,25 @@ corrections:
       by different narrators, then an Epilogue - is preserved in the body
       itself via each section's own heading; only the front-loaded index
       of that structure is removed.
+  - find: "...."
+    replace: ".…"
+    count: 1
+    note: >-
+      This one terminal four-dot run is a sentence-ending period ("1849.—June
+      15.") followed by a trailing-off ellipsis in Ezra Jennings's journal,
+      distinct in meaning from the mid-sentence three-dot form below - same
+      pattern and same fix as Dracula's identical case in #31. Normalizes
+      only the encoding (ASCII periods to the corpus's U+2026 convention,
+      per docs/cleaning-guide.md) while keeping the semantic distinction
+      intact. Must run before the three-dot rule so it isn't double-matched.
+  - find: "..."
+    replace: "…"
+    count: 41
+    note: >-
+      All 41 of these are Ezra Jennings's transcription of Mr. Candy's
+      delirious, gap-riddled speech (ch. "Fourth Narrative"): a single
+      fragmented sentence broken into disconnected phrases by "..." standing
+      in for the words Jennings couldn't make out, never a sentence-ending
+      period. Normalizes the encoding only; the semantic distinction from
+      the four-dot form above is preserved (that one becomes ".…", this one
+      becomes "…" alone), same as Dracula's identical case in #31.

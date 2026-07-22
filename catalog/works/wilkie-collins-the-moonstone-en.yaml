@@ -90,9 +90,13 @@ quality:
     index is removed (see overrides). The text starts with the actual
     work - title and author, then the Prologue - with no other front
     matter; no illustration markers are present in this transcription.
-    Automated and preliminary content checks are complete; awaiting the
-    maintainer's full human read-through, reviewed_by, and
-    reviewed_text_sha256.
+    The ASCII ellipsis encoding is normalised to the corpus's U+2026
+    convention - one sentence-final four-dot run in Ezra Jennings's
+    journal, and 41 mid-sentence three-dot runs representing the gaps in
+    Mr. Candy's delirious speech (same distinction, same fix, as
+    Dracula's (#31) case). Automated and preliminary content checks are
+    complete; awaiting the maintainer's full human read-through,
+    reviewed_by, and reviewed_text_sha256.
   reviewed_text_sha256: null
 
 processing:
