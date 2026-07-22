@@ -32,3 +32,23 @@ corrections:
       Stoker's novel, regardless of how public-domain the underlying work
       is. Stoker's own dedication ("TO / MY DEAR FRIEND / HOMMY-BEG",
       i.e. Hall Caine) immediately follows and is kept.
+  - find: "--"
+    replace: "—"
+    count: 1460
+    note: >-
+      This 1995-era transcription renders every em dash as plain ASCII
+      "--"; confirmed zero real em dash (U+2014) characters exist anywhere
+      in the raw text. Not an authorial or period-typesetting choice, just
+      a limitation of the transcription's character encoding — per
+      docs/cleaning-guide.md's punctuation-normalisation carve-out, this
+      is an unambiguous typographic variant of the same mark, same
+      category as the Time Machine's stray ". . ." fix in #17. Genuine
+      hyphenated words (e.g. "Buda-Pesth", "old-fashioned") use a single
+      hyphen and are unaffected; four-hyphen runs (the doubled
+      redaction-dash device, as in "his----!") correctly become "——",
+      matching the same device's native-Unicode form already used
+      elsewhere in the corpus (e.g. the Time Machine's "Where's——?").
+      Archaic place-name spellings in this text (Buda-Pesth, Bistritz,
+      Klausenburgh, Szekely, Tokay) are deliberately left untouched —
+      that's vocabulary/period usage, not a spelling or punctuation
+      variant, and outside the scope of this or any modernisation rule.
