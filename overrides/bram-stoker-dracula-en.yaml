@@ -52,3 +52,26 @@ corrections:
       Klausenburgh, Szekely, Tokay) are deliberately left untouched —
       that's vocabulary/period usage, not a spelling or punctuation
       variant, and outside the scope of this or any modernisation rule.
+  - find: "C_{2}HCl_{3}O. H_{2}O"
+    replace: "C₂HCl₃O. H₂O"
+    count: 1
+    note: >-
+      Dr. Seward names chloral hydrate; the Gutenberg transcription uses
+      plain-text subscript markup (_{n}) here, the same convention as
+      superscripts like M^{rs} seen in other Gutenberg editions - not
+      italics. Left as-is it would falsely register as an unpaired
+      underscore under the corpus's markdown-lite emphasis convention
+      (docs/dataset-format.md). Converted to real Unicode subscript
+      digits instead.
+  - find: "_“We are, dear Sirs,\n\n“Faithfully yours,\n\n“SAMUEL F. BILLINGTON & SON.”_"
+    replace: "_“We are, dear Sirs,_\n\n_“Faithfully yours,_\n\n_“SAMUEL F. BILLINGTON & SON.”_"
+    count: 1
+    note: >-
+      The only italic span in the whole text (out of ~485 underscore
+      pairs, verified by pairing every underscore in the document) that
+      crosses a paragraph break - one opening underscore before "We are"
+      and the closing one two paragraphs later, after "SON.\"". Standard
+      Markdown emphasis can't span a blank line, which conflicts with the
+      corpus's own markdown-lite contract. Re-wraps each paragraph of the
+      letter's sign-off individually so the italics survive without
+      redistributing across paragraph boundaries; no wording changed.
