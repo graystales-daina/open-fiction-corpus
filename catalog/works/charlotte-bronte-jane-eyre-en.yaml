@@ -1,0 +1,87 @@
+id: charlotte-bronte-jane-eyre-en
+title: "Jane Eyre: An Autobiography"
+language: en
+form: novel
+
+authors:
+  - name: Charlotte Brontë
+    birth_year: 1816
+    death_year: 1855
+
+contributors:
+  # Project Gutenberg transcription/production credit from the ebook 1260
+  # metadata and the pg1260.txt header. Recorded for provenance; a faithful
+  # transcription with trivial corrections is not separately rights-bearing
+  # (see rights.evidence).
+  - name: David Price
+    role: other
+
+publication:
+  original_year: 1847
+  edition_year: null
+
+source:
+  provider: gutenberg
+  identifier: "1260"
+  url: https://www.gutenberg.org/ebooks/1260
+  download_url: https://www.gutenberg.org/cache/epub/1260/pg1260.txt
+  revision: "2025-09-27"
+  format: txt
+
+rights:
+  status: uncertain
+  verified_jurisdictions: [US]
+  unverified_jurisdictions: [EU, UK]
+  evidence:
+    - The work was first published 16 October 1847, London, Smith, Elder
+      & Co., under the pseudonym "Currer Bell"; pre-1930 first publication
+      places it in the United States public domain, and Project Gutenberg
+      distributes ebook 1260 with a US public-domain clearance.
+    - Charlotte Brontë died on 31 March 1855, so life+70 protection
+      expired on 1 January 1926 in the UK and EU member states. Spain's
+      transitional 80-year post-mortem term (1879 Act, authors deceased
+      before 7 December 1987) expired on 1 January 1936, so there is no
+      outstanding Article 10 (Directive 2006/116/EC) exception.
+    - A faithful transcription with trivial corrections does not meet the
+      EU originality threshold for separate protection, and the UK
+      typographical-arrangement right does not subsist in a plain-text
+      file, so no separate transcription right is expected once the
+      artifact inspection below confirms its contents.
+  licence: null
+  notes: The underlying 1847 work is public domain in every reviewed
+    jurisdiction. The status stays uncertain only until the exact
+    Gutenberg transcription (ebook 1260) is inspected to confirm it
+    contains solely Brontë's text plus removable Gutenberg boilerplate,
+    with no third-party introductions, notes, or annotations; on a clean
+    inspection it flips to public-domain with US, UK, and EU all verified
+    (no jurisdiction carve-out).
+
+classification:
+  primary_genre: romance
+  genres: [romance, literary-fiction]
+  subgenres: [gothic-romance, bildungsroman]
+  audience: [adult]
+  pov: [first-person]
+  tense: [past]
+  style_tags: [dialogue-heavy]
+
+content:
+  origin: human
+  ai_assistance: none
+  original_language: en
+  is_translation: false
+
+quality:
+  status: candidate
+  flags: [uncertain-rights]
+  reviewed_by: []
+  review_notes: Backlog pick (#19); cleaned text not yet fetched or
+    human-reviewed.
+  reviewed_text_sha256: null
+
+processing:
+  extractor: gutenberg_txt_v1
+  cleaner: fiction_clean_v1
+  modernizer: modernize_spelling_v1
+  expected_min_words: 180000
+  source_sha256: 13414dee2951c3ee731d76d2ffd822016b2479c892162760c5d0eb2aa5fa7631

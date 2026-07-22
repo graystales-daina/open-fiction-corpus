@@ -1,0 +1,15 @@
+corrections:
+  - find: "_ILLUSTRATED BY F. H. TOWNSEND_\n\nLondon SERVICE & PATON 5 HENRIETTA STREET 1897\n\n_The Illustrations_ _in this Volume are the copyright of_ SERVICE & PATON, _London_\n\n"
+    replace: ""
+    count: 1
+    note: >-
+      Strips this 1897 illustrated edition's publisher imprint (Service
+      & Paton, London) and, more importantly, its illustrations-copyright
+      notice ("The Illustrations in this Volume are the copyright of
+      Service & Paton, London"). docs/review-checklist.md requires the
+      text to start with the actual work and no licence text; a
+      copyright notice is exactly that, regardless of how public-domain
+      the underlying 1847 text is, and it only concerns the illustrations
+      (not present as inline markers in this transcription) in any case.
+      Brontë's own dedication to Thackeray and her second-edition preface
+      immediately follow and are kept.

@@ -1,0 +1,124 @@
+id: jane-austen-pride-and-prejudice-en
+title: Pride and Prejudice
+language: en
+form: novel
+
+authors:
+  - name: Jane Austen
+    birth_year: 1775
+    death_year: 1817
+
+contributors:
+  # Project Gutenberg transcription/production credit from the ebook 1342
+  # metadata and the pg1342.txt header. Recorded for provenance; a
+  # faithful transcription with trivial corrections is not separately
+  # rights-bearing (see rights.evidence). George Saintsbury's 1894
+  # critical preface and Hugh Thomson's illustrations are recorded
+  # separately below as rights-relevant edition apparatus, excluded from
+  # the cleaned text (see overrides).
+  - name: Chuck Greif
+    role: other
+  - name: The Online Distributed Proofreading Team
+    role: other
+  - name: George Saintsbury
+    role: introducer
+    birth_year: 1845
+    death_year: 1933
+  - name: Hugh Thomson
+    role: illustrator
+    birth_year: 1860
+    death_year: 1920
+
+publication:
+  original_year: 1813
+  edition_year: 1894
+
+source:
+  provider: gutenberg
+  identifier: "1342"
+  url: https://www.gutenberg.org/ebooks/1342
+  download_url: https://www.gutenberg.org/cache/epub/1342/pg1342.txt
+  revision: "2026-02-10"
+  format: txt
+
+rights:
+  status: uncertain
+  verified_jurisdictions: [US]
+  unverified_jurisdictions: [EU, UK]
+  evidence:
+    - The work was first published 28 January 1813, London, T. Egerton,
+      anonymously ("By a Lady"); pre-1930 first publication places it in
+      the United States public domain, and Project Gutenberg distributes
+      ebook 1342 with a US public-domain clearance.
+    - Jane Austen died on 18 July 1817, so life+70 protection expired on
+      1 January 1888 in the UK and EU member states. Spain's transitional
+      80-year post-mortem term (1879 Act, authors deceased before 7
+      December 1987) expired on 1 January 1898, so there is no
+      outstanding Article 10 (Directive 2006/116/EC) exception.
+    - This specific Gutenberg transcription (ebook 1342) is the 1894
+      George Allen "Peacock edition," which adds a critical preface by
+      George Saintsbury and illustrations by Hugh Thomson. Both are
+      independently public domain (Saintsbury died 1933, Thomson died
+      1920; both clear US/UK/EU/Spain terms with no outstanding
+      exception) but are third-party editorial/illustrative apparatus,
+      not Austen's own text, and are excluded from the cleaned text
+      during extraction rather than accepted into the corpus, per
+      docs/review-checklist.md section 1.
+    - A faithful transcription with trivial corrections does not meet the
+      EU originality threshold for separate protection, and the UK
+      typographical-arrangement right does not subsist in a plain-text
+      file, so no separate transcription right is expected once the
+      artifact inspection below confirms its contents.
+  licence: null
+  notes: The underlying 1813 work is public domain in every reviewed
+    jurisdiction. The status stays uncertain only until the exact
+    Gutenberg transcription (ebook 1342) is inspected to confirm the
+    Saintsbury preface and Thomson illustrations are fully excludable and
+    that no other third-party introductions, notes, or annotations
+    remain; on a clean inspection it flips to public-domain with US, UK,
+    and EU all verified (no jurisdiction carve-out). An alternate
+    Gutenberg edition (#42671) was considered and rejected, since its
+    metadata lists an editor, R. W. Chapman, suggesting the transcribed
+    wording may follow Chapman's 1923 scholarly collation (Chapman died
+    1960, not yet public domain in the UK/EU) rather than a plain
+    reprint - a harder problem to exclude than an isolable preface block.
+
+classification:
+  primary_genre: romance
+  genres: [romance, literary-fiction]
+  subgenres: [romantic-comedy, social-novel]
+  audience: [adult]
+  pov: [third-person-omniscient]
+  tense: [past]
+  style_tags: [dialogue-heavy, free-indirect-discourse]
+
+content:
+  origin: human
+  ai_assistance: none
+  original_language: en
+  is_translation: false
+
+quality:
+  status: candidate
+  flags: [uncertain-rights]
+  reviewed_by: []
+  review_notes: Backlog pick (#18). Prepared from the pinned Gutenberg
+    artifact; the Saintsbury preface, publisher imprint/copyright, and
+    List of Illustrations index are excluded (see overrides), and the
+    ASCII em-dash substitution and one mis-cased chapter heading are
+    fixed. Known remaining work, deliberately left open rather than
+    solved here - this edition has 154 inline "[Illustration ...]"
+    markers scattered through the body (35 individually carrying a
+    "Copyright 1894 by George Allen" stamp) that the front/back-matter
+    overrides don't touch. Handling them needs either a real
+    pattern-matching cleaning step (reusable for future illustrated
+    editions) or a large batch of individual overrides - open for a
+    contributor, or revisit later. Not yet human-reviewed.
+  reviewed_text_sha256: null
+
+processing:
+  extractor: gutenberg_txt_v1
+  cleaner: fiction_clean_v1
+  modernizer: modernize_spelling_v1
+  expected_min_words: 110000
+  source_sha256: 74f2665d6e6925fc2c17dec644bec9e87df478a0f1836822125e8acbb3777806

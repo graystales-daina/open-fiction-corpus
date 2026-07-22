@@ -1,0 +1,12 @@
+corrections:
+  - find: "Contents\n\n\nPROLOGUE\n\nTHE STORY\n\nFIRST PERIOD CHAPTER I CHAPTER II CHAPTER III CHAPTER IV CHAPTER V CHAPTER VI CHAPTER VII CHAPTER VIII CHAPTER IX CHAPTER X CHAPTER XI CHAPTER XII CHAPTER XIII CHAPTER XIV CHAPTER XV CHAPTER XVI CHAPTER XVII CHAPTER XVIII CHAPTER XIX CHAPTER XX CHAPTER XXI CHAPTER XXII CHAPTER XXIII\n\nSECOND PERIOD FIRST NARRATIVE CHAPTER I CHAPTER II CHAPTER III CHAPTER IV CHAPTER V CHAPTER VI CHAPTER VII CHAPTER VIII\n\nSECOND NARRATIVE CHAPTER I CHAPTER II CHAPTER III\n\nTHIRD NARRATIVE CHAPTER I CHAPTER II CHAPTER III CHAPTER IV CHAPTER V CHAPTER VI CHAPTER VII CHAPTER VIII CHAPTER IX CHAPTER X\n\nFOURTH NARRATIVE\n\nFIFTH NARRATIVE\n\nSIXTH NARRATIVE I II III IV V\n\nSEVENTH NARRATIVE\n\nEIGHTH NARRATIVE\n\nEPILOGUE I II III\n\n\n"
+    replace: ""
+    count: 1
+    note: >-
+      Removes the generated table of contents (per docs/cleaning-guide.md,
+      "generated tables of contents" are normally stripped), same pattern
+      as #17/#31. The Moonstone's real structure - a Prologue, then
+      "The Story" told across First through Eighth "Periods"/"Narratives"
+      by different narrators, then an Epilogue - is preserved in the body
+      itself via each section's own heading; only the front-loaded index
+      of that structure is removed.
