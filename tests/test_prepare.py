@@ -226,6 +226,16 @@ def test_modernize_preserves_case_and_word_boundaries(tmp_path: Path) -> None:
     assert counts == {"to-day": 3, "connexion": 1}
 
 
+def test_modernize_handles_space_containing_replacement(tmp_path: Path) -> None:
+    # A hyphenated single-token source (matched whole-word, not a multi-word
+    # phrase) is safe even when its unambiguous modern form has a space.
+    root = make_root(tmp_path)
+    text = "Good-night, Jane. good-night! GOOD-NIGHT, all.\n"
+    result, counts = modernize_spelling(text, root)
+    assert result == "Good night, Jane. good night! GOOD NIGHT, all.\n"
+    assert counts == {"good-night": 3}
+
+
 def test_overrides_require_note_and_exact_count(tmp_path: Path) -> None:
     path = tmp_path / "work.yaml"
     path.write_text(

@@ -82,7 +82,7 @@ quality:
   flags: [uncertain-rights]
   reviewed_by: []
   review_notes: Backlog pick (#23). Prepared from the pinned Gutenberg
-    artifact; word count 194,788 against expected_min_words 180000. The
+    artifact; word count 194,812 against expected_min_words 180000. The
     Moonstone's real structure - a Prologue, then "The Story" told across
     First through Eighth Periods/Narratives by different narrators, then
     an Epilogue - is verified present and in order in the body itself;
@@ -94,9 +94,13 @@ quality:
     convention - one sentence-final four-dot run in Ezra Jennings's
     journal, and 41 mid-sentence three-dot runs representing the gaps in
     Mr. Candy's delirious speech (same distinction, same fix, as
-    Dracula's (#31) case). Automated and preliminary content checks are
-    complete; awaiting the maintainer's full human read-through,
-    reviewed_by, and reviewed_text_sha256.
+    Dracula's (#31) case). Several archaic hyphenated forms (good-bye,
+    good-night, half-a-dozen, half-an-hour) are modernised via the
+    shared rules file, added for Jane Eyre's corresponding forms and
+    applying here too since they're general rules, not per-work.
+    Automated and preliminary content checks are complete; awaiting the
+    maintainer's full human read-through, reviewed_by, and
+    reviewed_text_sha256.
   reviewed_text_sha256: null
 
 processing:

@@ -128,8 +128,11 @@ quality:
     "Mr. Wickham"; "often times his consequence" for "of ten times his
     consequence", confirmed against independent editions) are fixed,
     while a third flagged spot, "conversible companion", is confirmed as
-    Austen's own word choice and left untouched; all 61 chapters
-    verified present and in order. Not yet human-reviewed.
+    Austen's own word choice and left untouched; two more archaic
+    hyphenated forms (good-bye, half-a-dozen) are modernised via the
+    shared rules file, added for Jane Eyre's corresponding archaic forms
+    and applying here too since they're general rules, not per-work; all
+    61 chapters verified present and in order. Not yet human-reviewed.
   reviewed_text_sha256: null
 
 processing:
