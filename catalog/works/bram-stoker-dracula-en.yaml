@@ -47,8 +47,9 @@ rights:
     - A faithful transcription with trivial corrections does not meet the
       EU originality threshold for separate protection, and the UK
       typographical-arrangement right does not subsist in a plain-text
-      file, so no separate transcription right is expected once the
-      artifact inspection below confirms its contents.
+      file. The inspected artifact contains no separately rights-bearing
+      editorial material, so no separate transcription right is expected
+      for the inspected plain-text artifact.
   licence: null
   notes: The underlying 1897 work is public domain in every reviewed
     jurisdiction. The exact Gutenberg transcription (ebook 345) has been
