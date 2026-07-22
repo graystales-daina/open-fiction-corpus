@@ -1,34 +1,12 @@
 corrections:
 - count: 1
-  find: '[Illustration:
-
-
-    GEORGE ALLEN PUBLISHER
-
-
-    156 CHARING CROSS ROAD LONDON
-
-
-    RUSKIN HOUSE ]
-
-
-    [Illustration:
-
-
-    _Reading Jane’s Letters._ _Chap 34._ ]
-
-
-
-    PRIDE. and PREJUDICE
+  find: 'PRIDE. and PREJUDICE
 
 
     by Jane Austen,
 
 
     with a Preface by George Saintsbury and Illustrations by Hugh Thomson
-
-
-    [Illustration: 1894]
 
 
     Ruskin 156. Charing House. Cross Road.
@@ -42,21 +20,7 @@ corrections:
 
 
 
-    [Illustration:
-
-
-    _To J. Comyns Carr in acknowledgment of all I owe to his friendship and advice, these illustrations are gratefully inscribed_
-
-
-    _Hugh Thomson_ ]
-
-
-
     PREFACE.
-
-
-    [Illustration]
-
 
 
     _Walt Whitman has somewhere a fine and just distinction between “loving by allowance” and “loving with personal love.” This distinction applies to books as well as to men and women; and in the case of the not very numerous authors who are the objects of the personal affection, it brings a curious consequence with it. There is much more difference as to their best work than in the case of those others who are loved “by allowance” by convention, and because it is felt to be the right and proper thing to love them. And in the sect--fairly large and yet unusually choice--of Austenians or Janites, there would probably be found partisans of the claim to primacy of almost every one of the novels. To some the delightful freshness and humour of_ Northanger Abbey, _its completeness, finish, and_ entrain, _obscure the undoubted critical facts that its scale is small, and its scheme, after all, that of burlesque or parody, a kind in which the first rank is reached with difficulty._ Persuasion, _relatively faint in tone, and not enthralling in interest, has devotees who exalt above all the others its exquisite delicacy and keeping. The catastrophe of_ Mansfield Park _is admittedly theatrical, the hero and heroine are insipid, and the author has almost wickedly destroyed all romantic interest by expressly admitting that Edmund only took Fanny because Mary shocked him, and that Fanny might very likely have taken Crawford if he had been a little more assiduous; yet the matchless rehearsal-scenes and the characters of Mrs. Norris and others have secured, I believe, a considerable party for it._ Sense and Sensibility _has perhaps the fewest out-and-out admirers; but it does not want them._
@@ -105,10 +69,6 @@ corrections:
 
 
     _GEORGE SAINTSBURY._
-
-
-
-    [Illustration: List of Illustrations.]
 
 
 
@@ -419,45 +379,32 @@ corrections:
 
 
 
-    [Illustration: ·PRIDE AND PREJUDICE·
-
-
-
-    Chapter I.]
-
-
-
     '
-  note: 'Strips this 1894 George Allen "Peacock edition"''s full front matter: publisher/printer imprint and illustration markers, Hugh Thomson''s own dedication to J. Comyns Carr (his illustrator''s dedication, not Austen''s), George Saintsbury''s full critical preface (third-party editorial apparatus - independently public domain, Saintsbury died 1933, but excluded per docs/review-checklist.md the same as the alternate edition considered in rights.evidence), and the generated List of Illustrations (a page-number index, same category as a generated table of contents per docs/cleaning-guide.md). Chapter I''s heading was itself a decorative illustration ("[Illustration: ·PRIDE AND PREJUDICE· Chapter I.]"), the only chapter in this edition typeset that way; replaced with a plain "CHAPTER I." heading matching every other chapter (verified: II onward all use plain "CHAPTER N." headings, not illustration markers) rather than being deleted outright, since it''s the sole marker for the chapter boundary. Austen''s own text - "It is a truth universally acknowledged..." - is unaffected; nothing of hers is in this removed block. Austen published P&P anonymously with no dedication or preface of her own.'
+  note: 'Strips the 1894 George Allen "Peacock edition"''s remaining front matter after the general [Illustration ...] stripper (added to gutenberg_txt_v1) already removed the decorative brackets themselves: title-page byline/imprint, printer''s colophon, George Saintsbury''s full critical preface (third-party editorial apparatus - independently public domain, Saintsbury died 1933, but excluded per docs/review-checklist.md, same as the alternate edition considered in rights.evidence), and the generated List of Illustrations (a page-number index, same category as a generated table of contents per docs/cleaning-guide.md). This block ended with "Chapter I"''s heading, which was itself illustrated decoration in this edition and so was removed by the general stripper along with everything else in this span; replaced with a plain "CHAPTER I." heading matching every other chapter (II onward all use plain "CHAPTER N." headings) rather than left missing, since it''s the only marker for the chapter boundary. Austen''s own text - "It is a truth universally acknowledged..." - is unaffected; nothing of hers is in this removed block. Austen published P&P anonymously with no dedication or preface of her own.'
   replace: 'CHAPTER I.
 
 
 
     '
-- count: 470
-  find: --
-  note: 'This transcription renders every em dash as plain ASCII "--"; confirmed zero real em dash (U+2014) characters exist anywhere in the text after the front-matter strip above (which removed 28 more "--" instances along with the Saintsbury preface). Same pattern, same fix, as Dracula''s identical case in #31 - not an authorial or period-typesetting choice, just the transcription''s character encoding, per docs/cleaning-guide.md''s punctuation-normalisation carve-out. Genuine hyphenated words use a single hyphen and are unaffected; four-hyphen runs (the doubled redaction-dash device) correctly become "——".'
-  replace: —
-- count: 1
-  find: Chapter XLVI.
-  note: 'Transcription inconsistency, not a missing chapter: this heading was the only one of 61 rendered in mixed case ("Chapter") rather than the "CHAPTER" style used by every other regular chapter heading in this edition (Chapter I''s heading was a special decorative illustration, handled separately above and unrelated to this). Verified the chapter''s actual content is present and complete - it opens "Elizabeth had been a good deal disappointed in not finding a letter from Jane...", the unmistakable, correct start of chapter 46 in every edition - a case-sensitive search for "^CHAPTER" simply missed this one heading, it was never actually missing from the source. Normalizing the case only, no wording changed.'
-  replace: CHAPTER XLVI.
-- count: 1
-  find: '[Illustration:
-
-
-    THE END ]'
-  note: 'The novel''s ending, "THE END", is wrapped in a decorative [Illustration: ...] marker in this edition, same as Chapter I''s heading was. Kept as plain text (matching the Hound''s and Dracula''s precedent of keeping "THE END") with the illustration marker stripped, per docs/review-checklist.md''s leftover-marker requirement.'
-  replace: THE END
 - count: 1
   find: '
 
 
-
-    CHISWICK PRESS:—CHARLES WHITTINGHAM AND CO. TOOKS COURT, CHANCERY LANE, LONDON.
+    CHISWICK PRESS:--CHARLES WHITTINGHAM AND CO. TOOKS COURT, CHANCERY LANE, LONDON.
 
     '
-  note: The printer's colophon (already removed once from the front matter above) repeats at the very end of the physical book, a common Victorian printing convention. Not part of Austen's text; removed the same way as its front-matter occurrence.
+  note: The novel's ending, "THE END", was itself illustrated decoration in this edition (like Chapter I's heading) and so was removed by the general [Illustration ...] stripper along with the printer's colophon that follows it (a second occurrence of the same colophon already removed once from the front matter above - a common Victorian printing convention, appearing at both ends of the physical book). Restores "THE END" as plain text, matching the Hound's and Dracula's precedent of keeping it, and drops the colophon.
   replace: '
 
+
+    THE END
+
     '
+- count: 467
+  find: --
+  note: 'This transcription renders every em dash as plain ASCII "--"; confirmed zero real em dash (U+2014) characters exist anywhere in the text after the front/back-matter corrections above. Same pattern, same fix, as Dracula''s identical case in #31 - not an authorial or period-typesetting choice, just the transcription''s character encoding, per docs/cleaning-guide.md''s punctuation-normalisation carve-out. Genuine hyphenated words use a single hyphen and are unaffected; four-hyphen runs (the doubled redaction-dash device) correctly become "——".'
+  replace: —
+- count: 1
+  find: Chapter XLVI.
+  note: 'Transcription inconsistency, not a missing chapter: this heading was the only one of 61 rendered in mixed case ("Chapter") rather than the "CHAPTER" style used by every other regular chapter heading in this edition (Chapter I''s heading was illustrated decoration, handled separately above and unrelated to this). Verified the chapter''s actual content is present and complete - it opens "Elizabeth had been a good deal disappointed in not finding a letter from Jane...", the unmistakable, correct start of chapter 46 in every edition - a case-sensitive search for "^CHAPTER" simply missed this one heading, it was never actually missing from the source. Normalizing the case only, no wording changed.'
+  replace: CHAPTER XLVI.

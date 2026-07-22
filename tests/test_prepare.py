@@ -104,6 +104,59 @@ def test_extract_requires_markers() -> None:
         extract_gutenberg_txt("No markers here.")
 
 
+def _wrap_gutenberg(body: str) -> str:
+    return f"Header junk\n\n*** START OF THE PROJECT GUTENBERG EBOOK 1 ***\n{body}\n*** END OF THE PROJECT GUTENBERG EBOOK 1 ***\n\nFooter junk\n"
+
+
+def test_extract_strips_bare_illustration_marker() -> None:
+    body = extract_gutenberg_txt(
+        _wrap_gutenberg("First paragraph.\n\n[Illustration]\n\nSecond paragraph.")
+    )
+    assert body == "First paragraph.\n\nSecond paragraph."
+
+
+def test_extract_strips_captioned_illustration_marker() -> None:
+    body = extract_gutenberg_txt(
+        _wrap_gutenberg(
+            'First paragraph.\n\n[Illustration: "A caption here"]\n\nSecond paragraph.'
+        )
+    )
+    assert body == "First paragraph.\n\nSecond paragraph."
+
+
+def test_extract_strips_illustration_marker_with_nested_copyright_bracket() -> None:
+    body = extract_gutenberg_txt(
+        _wrap_gutenberg(
+            "First paragraph.\n\n"
+            "[Illustration:\n\n"
+            '"A caption here"\n\n'
+            "[_Copyright 1894 by Example Press._]]\n\n"
+            "Second paragraph."
+        )
+    )
+    assert body == "First paragraph.\n\nSecond paragraph."
+    assert "Copyright" not in body
+
+
+def test_extract_strips_multiple_illustration_markers_in_sequence() -> None:
+    body = extract_gutenberg_txt(
+        _wrap_gutenberg(
+            "First.\n\n[Illustration: one]\n\n[Illustration: two]\n\nSecond."
+        )
+    )
+    assert body == "First.\n\nSecond."
+
+
+def test_extract_leaves_unclosed_illustration_marker_in_place() -> None:
+    # No closing bracket: fails safe by leaving it visible for a human to
+    # notice during review, rather than guessing where it should end and
+    # risking eating real prose.
+    body = extract_gutenberg_txt(
+        _wrap_gutenberg("First paragraph.\n\n[Illustration: never closed\n\nSecond paragraph.")
+    )
+    assert "[Illustration: never closed" in body
+
+
 def test_clean_unwraps_paragraphs_and_keeps_section_gaps() -> None:
     text = "A heading\n\n\nFirst line\nsecond line.\n\nNext  paragraph\r\nhere.\n"
     cleaned = clean_fiction(text)

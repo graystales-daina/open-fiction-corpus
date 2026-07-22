@@ -103,17 +103,17 @@ quality:
   flags: [uncertain-rights]
   reviewed_by: []
   review_notes: Backlog pick (#18). Prepared from the pinned Gutenberg
-    artifact; the Saintsbury preface, publisher imprint/copyright, and
-    List of Illustrations index are excluded (see overrides), and the
-    ASCII em-dash substitution and one mis-cased chapter heading are
-    fixed. Known remaining work, deliberately left open rather than
-    solved here - this edition has 154 inline "[Illustration ...]"
-    markers scattered through the body (35 individually carrying a
-    "Copyright 1894 by George Allen" stamp) that the front/back-matter
-    overrides don't touch. Handling them needs either a real
-    pattern-matching cleaning step (reusable for future illustrated
-    editions) or a large batch of individual overrides - open for a
-    contributor, or revisit later. Not yet human-reviewed.
+    artifact. The 154 inline illustration markers scattered through
+    this edition's body (35 individually carrying a "Copyright 1894 by
+    George Allen" stamp), previously flagged here as unsolved, are now
+    handled generally - gutenberg_txt_v1 strips "[Illustration ...]"
+    markup as part of extraction, not as a per-work override, so this
+    benefits any future illustrated Gutenberg edition too. The
+    Saintsbury preface, publisher imprint/copyright, and List of
+    Illustrations index are excluded (see overrides); the ASCII
+    em-dash substitution and one mis-cased chapter heading are fixed;
+    all 61 chapters verified present and in order. Not yet
+    human-reviewed.
   reviewed_text_sha256: null
 
 processing:

@@ -273,6 +273,17 @@ _GUTENBERG_CREDIT = re.compile(
     r"^\s*(produced by|e-?text prepared by|transcribed (by|from)|special thanks)", re.IGNORECASE
 )
 
+# Gutenberg's plain-text convention for representing an illustration: a
+# bracketed marker, optionally with a caption, optionally with one level of
+# nested brackets inside (e.g. a per-illustration copyright stamp). No
+# example in any prepared work nests deeper than that, so a single level of
+# nesting is all this matches; a genuinely deeper case would simply be left
+# in place (failing safe, visibly, rather than over-matching into real
+# prose). Consumes its own trailing blank-line run too, so the cleaner sees
+# the two real paragraphs it was sandwiched between as directly adjacent,
+# and reconstructs a normal single paragraph gap between them on its own.
+_ILLUSTRATION_MARKER = re.compile(r"\[Illustration\b(?:[^\[\]]|\[[^\[\]]*\])*\]\n*")
+
 
 def extract_gutenberg_txt(raw_text: str) -> str:
     """Return the body between the Project Gutenberg start and end markers."""
@@ -293,6 +304,15 @@ def extract_gutenberg_txt(raw_text: str) -> str:
         if gap is None:
             return ""
         body = body[gap.end() :]
+
+    # Illustration markers carry no literary meaning (per the cleaning
+    # guide) and are common enough across illustrated Gutenberg editions to
+    # handle generically here, rather than per work. A marker that happens
+    # to carry meaningful text alongside the decoration (e.g. this edition's
+    # chapter heading illustrated as part of its artwork) is a work-specific
+    # exception for overrides to restore, not something this general step
+    # can know to special-case.
+    body = _ILLUSTRATION_MARKER.sub("", body)
     return body
 
 
