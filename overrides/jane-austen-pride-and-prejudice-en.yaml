@@ -408,3 +408,19 @@ corrections:
   find: Chapter XLVI.
   note: 'Transcription inconsistency, not a missing chapter: this heading was the only one of 61 rendered in mixed case ("Chapter") rather than the "CHAPTER" style used by every other regular chapter heading in this edition (Chapter I''s heading was illustrated decoration, handled separately above and unrelated to this). Verified the chapter''s actual content is present and complete - it opens "Elizabeth had been a good deal disappointed in not finding a letter from Jane...", the unmistakable, correct start of chapter 46 in every edition - a case-sensitive search for "^CHAPTER" simply missed this one heading, it was never actually missing from the source. Normalizing the case only, no wording changed.'
   replace: CHAPTER XLVI.
+- count: 3
+  find: '/* NIND '
+  note: 'Gutenberg plain-text typesetting-instruction markup specific to this transcription (not seen in any other prepared work): NIND marks a paragraph that should not be indented, used here for letter-opening salutations ("My dear friend," etc.). Markup only, no literary meaning per docs/cleaning-guide.md; the salutation text itself is kept.'
+  replace: ''
+- count: 3
+  find: '/* RIGHT '
+  note: 'Same Gutenberg typesetting-instruction convention as the NIND correction above: RIGHT marks a line meant to be right-justified, used here for a letter''s location/date header. Markup only; the text itself (e.g. "Hunsford, near Westerham, Kent, 15th October.") is kept.'
+  replace: ''
+- count: 3
+  find: '/* '
+  note: The remaining three instances of this transcription's comment-style typesetting markup carry no alignment keyword (just a bare /* ... */ wrapper) but are the same convention, again wrapping letter salutations ("Dear Sir," etc.). Must run after the NIND and RIGHT corrections above, since this bare prefix would otherwise also match those.
+  replace: ''
+- count: 9
+  find: ' */'
+  note: Closes out all 9 opening markers removed above (3 NIND + 3 RIGHT + 3 bare); confirmed no other ' */' substring exists anywhere else in the text.
+  replace: ''
