@@ -124,8 +124,12 @@ quality:
     and three mis-cased or missing-period chapter headings (XLVI, XIII,
     XIV) are fixed; four archaic spellings unique to this edition
     (manœuvre, develope, ancle, ancles) are modernised via the shared
-    rules file; all 61 chapters verified present and in order. Not yet
-    human-reviewed.
+    rules file; two genuine transcription errors ("Mr, Wickham" for
+    "Mr. Wickham"; "often times his consequence" for "of ten times his
+    consequence", confirmed against independent editions) are fixed,
+    while a third flagged spot, "conversible companion", is confirmed as
+    Austen's own word choice and left untouched; all 61 chapters
+    verified present and in order. Not yet human-reviewed.
   reviewed_text_sha256: null
 
 processing:

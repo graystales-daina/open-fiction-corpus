@@ -405,6 +405,14 @@ corrections:
   find: CHAPTER XIV
   replace: CHAPTER XIV.
   note: 'Same transcription inconsistency as Chapter XIII above: missing the trailing period every other chapter heading in this edition uses. Verified the chapter itself is present and complete - it opens "During dinner, Mr. Bennet scarcely spoke at all...", the correct start of chapter 14. Adds the missing period only, no wording changed.'
+- count: 1
+  find: 'Mr, Wickham'
+  replace: 'Mr. Wickham'
+  note: 'Transcription typo: a comma where every other honorific in the text uses a period. Confirmed against independent editions (e.g. Wikisource, SparkNotes) that this reads "Mr. Wickham" in the original - punctuation-only fix, no wording changed.'
+- count: 1
+  find: often times his consequence
+  replace: of ten times his consequence
+  note: 'Transcription error, not archaic phrasing: "often times his consequence" is grammatically incoherent in context ("appear unpleasant in the eyes of a man often times his consequence"), whereas "of ten times his consequence" - a man of ten times Wickham''s social standing, i.e. Darcy - is coherent and confirmed as Austen''s actual wording against independent editions (e.g. Wikisource'' Chapter 18). Reads as a word-boundary transcription slip ("of ten" misrendered as "often"), not a period spelling; the similarly-flagged "conversible companion" elsewhere in this edition was checked the same way and found to be Austen''s genuine original word choice (confirmed via SparkNotes'' full text), so it is deliberately left untouched.'
 - count: 3
   find: '/* NIND '
   note: 'Gutenberg plain-text typesetting-instruction markup specific to this transcription (not seen in any other prepared work): NIND marks a paragraph that should not be indented, used here for letter-opening salutations ("My dear friend," etc.). Markup only, no literary meaning per docs/cleaning-guide.md; the salutation text itself is kept.'
