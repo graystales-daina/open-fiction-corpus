@@ -116,13 +116,17 @@ quality:
   flags: [uncertain-rights]
   reviewed_by: []
   review_notes: Backlog pick (#20). Prepared from the pinned Gutenberg
-    artifact; word count 77,243 against expected_min_words 70000, all 24
-    chapters verified present and in order. The title page, a
-    transcriber's note, and the publisher imprint are excluded, keeping
-    Mary Shelley's 1831 Introduction in full; Percy Bysshe Shelley's 1817
-    preface is excluded (see rights.evidence for the attribution) without
-    re-typing the "LETTER I." heading that already follows it in source -
-    an earlier version of this override injected a duplicate heading,
+    artifact; word count 77,252 against expected_min_words 70000, all 24
+    chapters verified present and in order. The title, subtitle "OR, THE
+    MODERN PROMETHEUS.", and byline "BY MARY W. SHELLEY." are kept at the
+    very start of the body; a credit line, transcriber's
+    note, and the publisher imprint that follow are excluded, keeping
+    Mary Shelley's 1831 Introduction in full - an earlier override version
+    dropped the title/byline along with that boilerplate, caught in
+    review and fixed. Percy Bysshe Shelley's 1817 preface is excluded (see
+    rights.evidence for the attribution) without re-typing the
+    "LETTER I." heading that already follows it in source - an earlier
+    version of this override also injected a duplicate heading there,
     caught in review and fixed. Ends cleanly on "THE END." with a trailing
     colophon and transcriber's note excluded. Illustration markers are
     stripped automatically.
