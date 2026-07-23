@@ -48,7 +48,27 @@ corrections:
 
 
     '
-  note: 'Removes the generated table of contents (per docs/cleaning-guide.md, "generated tables of contents" are normally stripped), same pattern as #17/#31/#32. Also drops the redundant second "TREASURE ISLAND" title repeat that immediately follows the ToC, right before "PART ONE" - the title already appears once at the very start of the body, alongside the author byline; PART ONE itself is the real sectional heading marking where the story proper begins.'
+  note: 'Removes the generated table of contents (per docs/cleaning-guide.md, "generated tables of contents" are normally stripped), same pattern as #17/#31/#32. Also drops the redundant third "TREASURE ISLAND" title repeat that immediately follows the ToC, right before "PART ONE" - the title already appears once at the very start of the body, alongside the author byline; PART ONE itself is the real sectional heading marking where the story proper begins.'
+- count: 1
+  find: "by Robert Louis Stevenson\n\n\nTREASURE ISLAND\n\nTo S.L.O."
+  replace: "by Robert Louis Stevenson\n\nTo S.L.O."
+  note: >-
+    Drops a second, closer "TREASURE ISLAND" title repeat that the earlier
+    review pass missed - the title and byline already appear once at the
+    very start of the body, and this second occurrence sits immediately
+    before Stevenson's own dedication ("To S.L.O., an American
+    gentleman..."), which is kept. A third repeat (right before "PART
+    ONE") is removed by the table-of-contents correction below.
+- count: 1
+  find: "XXVII Narrative Continued by the Doctor: The Jolly-boat’s Last Trip"
+  replace: "XVII Narrative Continued by the Doctor: The Jolly-boat’s Last Trip"
+  note: >-
+    Corrects an apparent source/transcription typo: this chapter is
+    numbered XXVII in the body between XVI and XVIII, but Gutenberg's own
+    generated table of contents (removed above) correctly numbers it XVII,
+    and a genuine, later Chapter XXVII ("Pieces of Eight") exists further
+    on. Fixes only this one misnumbered heading; the real XXVII is
+    untouched. No wording changed.
 - count: 1
   find: 'If sailor tales to sailor tunes, Storm and adventure, heat and cold, If schooners, islands, and maroons, And buccaneers, and buried gold, And all the old romance, retold Exactly in the ancient way, Can please, as me they pleased of old, The wiser youngsters of today:'
   replace: "If sailor tales to sailor tunes,\n    Storm and adventure, heat and cold,\nIf schooners, islands, and maroons,\n    And buccaneers, and buried gold,\nAnd all the old romance, retold\n    Exactly in the ancient way,\nCan please, as me they pleased of old,\n    The wiser youngsters of today:"
