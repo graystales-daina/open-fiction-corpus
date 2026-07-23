@@ -31,20 +31,35 @@ corrections:
     printer errors, both after "THE END." (kept) - neither is part of the novel,
     same pattern as Dracula's colophon in #31.
 - count: 1
+  find: "\"Like one who, on a lonely road, Doth walk in fear and dread, And, having once turned round, walks on, And turns no more his head; Because he knows a frightful fiend Doth close behind him tread.\"[1]"
+  replace: "\"Like one who, on a lonely road,\nDoth walk in fear and dread,\nAnd, having once turned round, walks on,\nAnd turns no more his head;\nBecause he knows a frightful fiend\nDoth close behind him tread.\"[1]"
+  note: >-
+    Restores the line breaks (1 of 3 verse passages in this novel) of the
+    Coleridge quotation (footnoted as "Ancient Mariner") in ch. 5, flattened
+    by fiction_clean_v1's prose-only line-unwrapping (see
+    docs/cleaning-guide.md). No wording changed.
+- count: 1
+  find: "We rest; a dream has power to poison sleep. We rise; one wand'ring thought pollutes the day. We feel, conceive, or reason; laugh or weep, Embrace fond woe, or cast our cares away; It is the same: for, be it joy or sorrow, The path of its departure still is free. Man's yesterday may ne'er be like his morrow; Nought may endure but mutability!"
+  replace: "We rest; a dream has power to poison sleep.\nWe rise; one wand'ring thought pollutes the day.\nWe feel, conceive, or reason; laugh or weep,\nEmbrace fond woe, or cast our cares away;\nIt is the same: for, be it joy or sorrow,\nThe path of its departure still is free.\nMan's yesterday may ne'er be like his morrow;\nNought may endure but mutability!"
+  note: >-
+    Restores the line breaks (2 of 3 verse passages) of the unattributed
+    "Mutability" quotation (Percy Bysshe Shelley's poem of that name) in ch.
+    10, flattened by fiction_clean_v1's prose-only line-unwrapping. No
+    wording changed.
+- count: 1
   find: "----\"The sounding cataract Haunted him like a passion: the tall rock, The mountain, and the deep and gloomy wood, Their colours and their forms, were then to him An appetite; a feeling, and a love, That had no need of a remoter charm, By thought supplied, or any interest Unborrow'd from the eye\"[3]"
   replace: "----\"The sounding cataract\nHaunted him like a passion: the tall rock,\nThe mountain, and the deep and gloomy wood,\nTheir colours and their forms, were then to him\nAn appetite; a feeling, and a love,\nThat had no need of a remoter charm,\nBy thought supplied, or any interest\nUnborrow'd from the eye\"[3]"
   note: >-
-    Restores the line breaks of the Wordsworth quotation (Tintern Abbey,
-    footnoted as such) in ch. 18, flattened by fiction_clean_v1's prose-only
-    line-unwrapping (see docs/cleaning-guide.md) - the only verse passage in
-    this novel; unlike the doubled-dash device elsewhere in the text ("my
-    friend, my benefactor----", a trailing-off in dialogue), the leading "----"
-    here is a period convention marking an excerpted quotation that begins mid-
-    line of its source poem, not a redaction. Left in ASCII form here
-    deliberately, same reasoning as Treasure Island's dedication poem: this
-    correction runs before the em-dash rule below, so the general rule
-    normalises it afterward like every other instance in the text. No wording
-    changed.
+    Restores the line breaks (3 of 3 verse passages) of the Wordsworth
+    quotation (Tintern Abbey, footnoted as such) in ch. 18, flattened by
+    fiction_clean_v1's prose-only line-unwrapping; unlike the doubled-dash
+    device elsewhere in the text ("my friend, my benefactor----", a
+    trailing-off in dialogue), the leading "----" here is a period
+    convention marking an excerpted quotation that begins mid-line of its
+    source poem, not a redaction. Left in ASCII form here deliberately,
+    same reasoning as Treasure Island's dedication poem: this correction
+    runs before the em-dash rule below, so the general rule normalises it
+    afterward like every other instance in the text. No wording changed.
 - count: 202
   find: "--"
   replace: "—"

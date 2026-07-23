@@ -35,7 +35,7 @@ source:
   identifier: "42324"
   url: https://www.gutenberg.org/ebooks/42324
   download_url: https://www.gutenberg.org/cache/epub/42324/pg42324.txt
-  revision: "2026-07-23"
+  revision: "2024-10-23"
   format: txt
 
 rights:
@@ -123,9 +123,11 @@ quality:
     preface is excluded (see rights.evidence for the attribution). Ends
     cleanly on "THE END." with a trailing colophon and transcriber's
     note excluded. Both illustration markers are stripped automatically.
-    The novel's one verse passage (a footnoted Wordsworth quotation, ch.
-    18) has its line breaks restored (fiction_clean_v1 is prose-only by
-    design, per docs/cleaning-guide.md). The ASCII em-dash substitution
+    The novel's three verse passages - a footnoted Coleridge quotation
+    (ch. 5), an unattributed Percy Bysshe Shelley "Mutability" quotation
+    (ch. 10), and a footnoted Wordsworth quotation (ch. 18) - have their
+    line breaks restored (fiction_clean_v1 is prose-only by design, per
+    docs/cleaning-guide.md). The ASCII em-dash substitution
     (202 instances) is fixed; confirmed zero real em dash characters
     reach the extracted body (2 exist in the raw file but sit in
     Gutenberg's license boilerplate, outside the START/END markers).
