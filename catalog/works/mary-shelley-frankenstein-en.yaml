@@ -116,13 +116,16 @@ quality:
   flags: [uncertain-rights]
   reviewed_by: []
   review_notes: Backlog pick (#20). Prepared from the pinned Gutenberg
-    artifact; word count 77,245 against expected_min_words 70000, all 24
+    artifact; word count 77,243 against expected_min_words 70000, all 24
     chapters verified present and in order. The title page, a
     transcriber's note, and the publisher imprint are excluded, keeping
     Mary Shelley's 1831 Introduction in full; Percy Bysshe Shelley's 1817
-    preface is excluded (see rights.evidence for the attribution). Ends
-    cleanly on "THE END." with a trailing colophon and transcriber's
-    note excluded. Both illustration markers are stripped automatically.
+    preface is excluded (see rights.evidence for the attribution) without
+    re-typing the "LETTER I." heading that already follows it in source -
+    an earlier version of this override injected a duplicate heading,
+    caught in review and fixed. Ends cleanly on "THE END." with a trailing
+    colophon and transcriber's note excluded. Illustration markers are
+    stripped automatically.
     The novel's three verse passages - a footnoted Coleridge quotation
     (ch. 5), an unattributed Percy Bysshe Shelley "Mutability" quotation
     (ch. 10), and a footnoted Wordsworth quotation (ch. 18) - have their
